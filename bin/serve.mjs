@@ -29,4 +29,9 @@ http.createServer((req, res) => {
     const stream = fs.createReadStream(file);
     (gzip ? stream.pipe(zlib.createGzip()) : stream).pipe(res);
   });
+}).on('error', (e) => {
+  if (e.code === 'EADDRINUSE') console.error(`port ${PORT} on ${HOST} is already in use (another process, or an SSH tunnel to a remote dashboard?). Try: PORT=8091 bin/dash start`);
+  else if (e.code === 'EACCES') console.error(`no permission to bind port ${PORT}; use a port above 1024`);
+  else console.error(e.message);
+  process.exit(1);
 }).listen(PORT, HOST, () => console.log(`serving ${ROOT} on http://${HOST}:${PORT}/`));

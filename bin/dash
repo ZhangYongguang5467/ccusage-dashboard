@@ -31,12 +31,19 @@ cron_add() { { crontab -l 2>/dev/null | grep -vF "$CRON_MARK"; echo "*/5 * * * *
 cron_has() { crontab -l 2>/dev/null | grep -qF "$CRON_MARK"; }
 
 node_pid() { [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null && cat "$PIDF"; }
+port_free() { node -e 'const s=require("net").createServer();s.once("error",()=>process.exit(1));s.listen(+process.argv[1],process.argv[2],()=>s.close(()=>process.exit(0)))' "$1" "${HOST:-127.0.0.1}" 2>/dev/null; }
+# Fail early, before touching cron, if something else already owns the port.
+# Skipped when the port is ours (our server / our nginx site already up).
+check_port() {
+  if [ "$MODE" = node ]; then node_pid >/dev/null && return; else [ -e "$SITE" ] && return; fi
+  port_free "$PORT" || die "port $PORT is already in use — another process, or an SSH tunnel to a remote dashboard? Try: PORT=8091 bin/dash $1"
+}
 node_start() {
   if node_pid >/dev/null; then say "built-in server already running (pid $(node_pid))"; return; fi
   mkdir -p "$ROOT/logs"
   PORT="$PORT" HOST="${HOST:-127.0.0.1}" nohup node "$ROOT/bin/serve.mjs" >> "$ROOT/logs/serve.log" 2>&1 &
   echo $! > "$PIDF"; sleep 0.5
-  node_pid >/dev/null || { tail -3 "$ROOT/logs/serve.log" >&2; die "built-in server failed to start"; }
+  node_pid >/dev/null || { tail -8 "$ROOT/logs/serve.log" >&2; die "built-in server failed to start"; }
 }
 node_stop() { local p; p="$(node_pid)" && kill "$p" 2>/dev/null; rm -f "$PIDF"; }
 node_port() { [ -f "$ROOT/logs/serve.log" ] && sed -n 's#.*http://[^:]*:\([0-9]*\)/.*#\1#p' "$ROOT/logs/serve.log" | tail -1; }
@@ -63,6 +70,7 @@ serve_stop() {
 
 cmd_install() {
   say "installing dependencies"
+  check_port install
   if ! ( cd "$ROOT" && npm i --no-fund --no-audit --loglevel=error ); then
     warn "npm i failed — continuing without ccusage. Billing-window panels will be empty; everything else works."
     warn "check: npm config get registry   (a proxy/policy may block registry.npmjs.org)"
@@ -76,7 +84,7 @@ cmd_install() {
   say "ready: http://localhost:$PORT/"
   cmd_status
 }
-cmd_start() { serve_start; cron_add; cmd_status; }
+cmd_start() { check_port start; serve_start; cron_add; cmd_status; }
 cmd_stop() { serve_stop; cron_remove; say "stopped: server off, cron entry removed (data kept)"; }
 cmd_uninstall() {
   cmd_stop
