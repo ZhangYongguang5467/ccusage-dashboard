@@ -1,0 +1,5 @@
+node_modules/
+logs/
+www/data/
+nginx/ccusage-dashboard.conf
+*.log

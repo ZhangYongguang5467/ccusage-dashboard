@@ -1,0 +1,14 @@
+{
+  "name": "ccusage-dashboard",
+  "version": "1.0.0",
+  "description": "Self-hosted dashboard for local Claude Code token usage and estimated cost",
+  "main": "bin/aggregate.mjs",
+  "scripts": {
+    "refresh": "bin/refresh.sh",
+    "aggregate": "node bin/aggregate.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "ccusage": "^20.0.22"
+  }
+}

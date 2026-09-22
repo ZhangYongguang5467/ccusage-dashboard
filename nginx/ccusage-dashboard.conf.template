@@ -1,0 +1,26 @@
+# Rendered by bin/install-nginx.sh -> nginx/ccusage-dashboard.conf (gitignored).
+# __ROOT__ is replaced with the repo path, __PORT__ with the listen port.
+server {
+    listen __PORT__;
+    listen [::]:__PORT__;
+    server_name _;
+    root __ROOT__/www;
+    index index.html;
+    access_log /var/log/nginx/ccusage-dashboard.access.log;
+    error_log  /var/log/nginx/ccusage-dashboard.error.log;
+
+    gzip on;
+    gzip_types application/json text/css application/javascript;
+    gzip_min_length 1024;
+
+    location = /healthz { return 200 "ok\n"; add_header Content-Type text/plain; }
+
+    location /data/ {
+        add_header Cache-Control "no-store";
+        types { application/json json; }
+    }
+    location / {
+        try_files $uri $uri/ =404;
+        add_header Cache-Control "no-cache";
+    }
+}
