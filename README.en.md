@@ -15,6 +15,7 @@ Static page + a cron job that regenerates JSON; nginx only serves files. No back
 ├── bin/aggregate.mjs    # scans ~/.claude/projects/**/*.jsonl, aggregates by project×date×model + task segmentation
 ├── bin/refresh.sh       # cron every 5 min: ccusage JSON + aggregate.mjs -> www/data/
 ├── bin/install-nginx.sh # renders the nginx site and enables it (needs sudo)
+├── bin/uninstall-nginx.sh # disables the site (needs sudo)
 ├── nginx/*.template     # site template, __ROOT__ / __PORT__ filled in at install time
 ├── www/index.html       # the whole page (Chart.js, no build)
 └── www/data/*.json      # generated data, never committed
@@ -70,6 +71,19 @@ To give a project a nicer label, drop it in `www/data/aliases.json` (gitignored,
 ```
 
 The key is the project id — the cwd with `/` replaced by `-`.
+
+## Start / stop
+
+nginx serves the page — there is no long-running process of its own. "Start" means enabling the site, "stop" means disabling it.
+
+```bash
+sudo PORT=8090 bin/install-nginx.sh     # enable (or re-enable on another port)
+sudo bin/uninstall-nginx.sh             # disable the site, keep repo and data
+crontab -l | grep -v ccusage-dashboard | crontab -   # stop the refresh cron job
+sudo systemctl reload nginx             # reload after editing the config
+```
+
+Full cleanup: `rm -rf www/data logs node_modules nginx/ccusage-dashboard.conf`
 
 ## Operating it
 

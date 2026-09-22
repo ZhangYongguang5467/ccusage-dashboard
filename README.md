@@ -15,6 +15,7 @@
 ├── bin/aggregate.mjs   # 扫 ~/.claude/projects/**/*.jsonl，按 项目×日期×模型 聚合 + 任务段切分
 ├── bin/refresh.sh      # cron 每 5 分钟跑：ccusage JSON + aggregate.mjs → www/data/
 ├── bin/install-nginx.sh# 渲染 nginx 配置并启用站点（需要 sudo）
+├── bin/uninstall-nginx.sh # 停用站点（需要 sudo）
 ├── nginx/*.template    # 站点模板，安装时替换 __ROOT__ / __PORT__
 ├── www/index.html      # 单文件页面（Chart.js，无构建步骤）
 └── www/data/*.json     # 生成的数据，不进 git
@@ -70,6 +71,19 @@ gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
 ```
 
 key 是项目 id，即 cwd 把 `/` 换成 `-`。
+
+## 启动 / 停止
+
+站点由 nginx 提供，没有常驻进程；"启动"= 启用站点，"关闭"= 停用站点。
+
+```bash
+sudo PORT=8090 bin/install-nginx.sh     # 启用（或换端口重新启用）
+sudo bin/uninstall-nginx.sh             # 停用站点，保留仓库与数据
+crontab -l | grep -v ccusage-dashboard | crontab -   # 停掉定时刷新
+sudo systemctl reload nginx             # 改完配置后重载
+```
+
+彻底清理：`rm -rf www/data logs node_modules nginx/ccusage-dashboard.conf`
 
 ## 运维
 
