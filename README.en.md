@@ -21,6 +21,17 @@ Static page + a cron job that regenerates JSON; nginx only serves files. No back
 └── www/data/*.json      # generated data, never committed
 ```
 
+## Requirements
+
+- Node.js >= 18 (uses global `fetch`)
+- nginx, or any tool that can serve a static directory
+- cron (optional, for the 5-minute auto refresh)
+- Claude Code transcripts on this machine: `~/.claude/projects/**/*.jsonl`
+
+## Privacy
+
+Everything is read locally and no usage data is uploaded. The only outbound request is the public LiteLLM price table, fetched once every 24h from `raw.githubusercontent.com`, falling back to the local cache if it fails; `ccusage` also has an `--offline` fallback.
+
 ## Install
 
 ```bash

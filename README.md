@@ -21,6 +21,17 @@
 └── www/data/*.json     # 生成的数据，不进 git
 ```
 
+## 依赖
+
+- Node.js ≥ 18（用到全局 `fetch`）
+- nginx，或任意能服务静态目录的工具
+- cron（可选，用于每 5 分钟自动刷新）
+- 本机已有 Claude Code 的会话记录：`~/.claude/projects/**/*.jsonl`
+
+## 隐私
+
+全程只读本机文件，不上传任何用量数据。唯一的外网请求是每 24 小时拉一次 LiteLLM 的公开价格表（`raw.githubusercontent.com`），失败就退回本地缓存；`ccusage` 也带 `--offline` 兜底。
+
 ## 安装
 
 ```bash

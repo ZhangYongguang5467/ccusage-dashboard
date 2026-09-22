@@ -10,5 +10,17 @@
   "license": "MIT",
   "dependencies": {
     "ccusage": "^20.0.22"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZhangYongguang5467/ccusage-dashboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ZhangYongguang5467/ccusage-dashboard/issues"
+  },
+  "homepage": "https://github.com/ZhangYongguang5467/ccusage-dashboard#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
 }
