@@ -14,8 +14,9 @@ Static page + a cron job that regenerates JSON; nginx only serves files. No back
 .
 ├── bin/aggregate.mjs    # scans ~/.claude/projects/**/*.jsonl, aggregates by project×date×model + task segmentation
 ├── bin/refresh.sh       # cron every 5 min: ccusage JSON + aggregate.mjs -> www/data/
-├── bin/install-nginx.sh # renders the nginx site and enables it (needs sudo)
-├── bin/uninstall-nginx.sh # disables the site (needs sudo)
+├── bin/dash             # single entry point: install / start / stop / status / refresh / uninstall
+├── bin/install-nginx.sh # renders and enables the nginx site (called by bin/dash)
+├── bin/uninstall-nginx.sh # disables the site
 ├── nginx/*.template     # site template, __ROOT__ / __PORT__ filled in at install time
 ├── www/index.html       # the whole page (Chart.js, no build)
 └── www/data/*.json      # generated data, never committed
@@ -35,20 +36,44 @@ Everything is read locally and no usage data is uploaded. The only outbound requ
 ## Install
 
 ```bash
-npm i                                  # pins ccusage@20 locally
-( crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/bin/refresh.sh >/dev/null 2>&1" ) | crontab -
-bin/refresh.sh                         # generate data once (~12s)
-sudo PORT=8090 bin/install-nginx.sh    # render + enable the nginx site
-curl -s http://127.0.0.1:8090/healthz
+git clone https://github.com/ZhangYongguang5467/ccusage-dashboard.git
+cd ccusage-dashboard
+bin/dash install
 ```
 
-No absolute paths are baked in: `install-nginx.sh` renders `nginx/ccusage-dashboard.conf` (gitignored) from the repo's real location, and both `refresh.sh` and `aggregate.mjs` resolve paths from the script location.
+One command does all four steps: install deps, generate the data once, schedule the 5-minute cron job, and enable the nginx site (the only step that calls sudo). Then open <http://localhost:8090/>.
+
+Another port: `PORT=8091 bin/dash install`
+
+## Start / stop
+
+```bash
+bin/dash status      # site, cron, data freshness
+bin/dash stop        # disable site + cron, keep the data
+bin/dash start       # enable again
+bin/dash refresh     # regenerate the data now
+bin/dash uninstall   # stop, then delete data / logs / node_modules (repo untouched)
+```
+
+No absolute paths are baked in: the script renders `nginx/ccusage-dashboard.conf` (gitignored) from the repo's real location, and both `refresh.sh` and `aggregate.mjs` resolve paths from the script location.
 
 For remote access use an SSH tunnel rather than opening a firewall port — the page shows project paths and cost:
 
 ```bash
 gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
 ```
+
+<details>
+<summary>Manual setup, without bin/dash</summary>
+
+```bash
+npm i
+bin/refresh.sh
+( crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/bin/refresh.sh >/dev/null 2>&1" ) | crontab -
+sudo PORT=8090 bin/install-nginx.sh     # to disable: sudo bin/uninstall-nginx.sh
+```
+
+</details>
 
 ## What's on the page
 
@@ -83,26 +108,12 @@ To give a project a nicer label, drop it in `www/data/aliases.json` (gitignored,
 
 The key is the project id — the cwd with `/` replaced by `-`.
 
-## Start / stop
-
-nginx serves the page — there is no long-running process of its own. "Start" means enabling the site, "stop" means disabling it.
-
-```bash
-sudo PORT=8090 bin/install-nginx.sh     # enable (or re-enable on another port)
-sudo bin/uninstall-nginx.sh             # disable the site, keep repo and data
-crontab -l | grep -v ccusage-dashboard | crontab -   # stop the refresh cron job
-sudo systemctl reload nginx             # reload after editing the config
-```
-
-Full cleanup: `rm -rf www/data logs node_modules nginx/ccusage-dashboard.conf`
-
 ## Operating it
 
 ```bash
-bin/refresh.sh                 # refresh now
 node bin/aggregate.mjs         # re-aggregate only (skips ccusage, ~5s)
 tail logs/refresh.log
-crontab -l | grep ccusage      # */5 * * * *
+crontab -l | grep ccusage-dashboard   # */5 * * * *
 npm i ccusage@20               # upgrade ccusage (stay on 20.x)
 ```
 

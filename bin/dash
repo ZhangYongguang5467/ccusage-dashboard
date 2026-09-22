@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# One entry point for the dashboard: install / start / stop / status / refresh / uninstall.
+#   bin/dash install          set everything up (deps, data, cron, nginx site)
+#   PORT=8091 bin/dash install   ...on another port
+set -uo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PORT="${PORT:-8090}"
+CRON_MARK="$ROOT/bin/refresh.sh"
+SITE=/etc/nginx/sites-enabled/ccusage-dashboard.conf
+
+die() { echo "error: $*" >&2; exit 1; }
+say() { printf '\033[36m==>\033[0m %s\n' "$*"; }
+[ "$(id -u)" -eq 0 ] && die "run as your normal user — the script calls sudo only for nginx"
+
+cron_remove() { crontab -l 2>/dev/null | grep -vF "$CRON_MARK" | crontab - 2>/dev/null; }
+cron_add() { { crontab -l 2>/dev/null | grep -vF "$CRON_MARK"; echo "*/5 * * * * $CRON_MARK >/dev/null 2>&1"; } | crontab -; }
+cron_has() { crontab -l 2>/dev/null | grep -qF "$CRON_MARK"; }
+site_port() { [ -e "$ROOT/nginx/ccusage-dashboard.conf" ] && sed -n 's/^ *listen \([0-9]*\);/\1/p' "$ROOT/nginx/ccusage-dashboard.conf" | head -1; }
+
+cmd_install() {
+  local out
+  say "installing dependencies"
+  ( cd "$ROOT" && npm i --no-fund --no-audit --loglevel=error ) || die "npm i failed"
+  say "generating data (first run takes ~15s)"
+  "$ROOT/bin/refresh.sh" || die "refresh failed — see $ROOT/logs/refresh.log"
+  say "scheduling refresh every 5 minutes"
+  cron_add || die "could not write crontab"
+  say "enabling nginx site on port $PORT (needs sudo)"
+  out="$(sudo PORT="$PORT" "$ROOT/bin/install-nginx.sh" 2>&1)" || { echo "$out" >&2; die "nginx setup failed"; }
+  echo
+  say "ready: http://localhost:$PORT/"
+  cmd_status
+}
+
+cmd_start() {
+  local out
+  say "enabling nginx site on port $PORT (needs sudo)"
+  out="$(sudo PORT="$PORT" "$ROOT/bin/install-nginx.sh" 2>&1)" || { echo "$out" >&2; die "nginx setup failed"; }
+  cron_add
+  cmd_status
+}
+
+cmd_stop() {
+  local out
+  say "disabling nginx site (needs sudo)"
+  out="$(sudo "$ROOT/bin/uninstall-nginx.sh" 2>&1)" || { echo "$out" >&2; die "could not disable the site"; }
+  cron_remove
+  say "stopped: site disabled, cron entry removed (data kept)"
+}
+
+cmd_uninstall() {
+  cmd_stop
+  say "removing generated data, logs and node_modules"
+  rm -rf "$ROOT/www/data" "$ROOT/logs" "$ROOT/node_modules"
+  say "uninstalled (the repo itself is untouched)"
+}
+
+cmd_refresh() { "$ROOT/bin/refresh.sh" && say "refreshed" && cmd_status; }
+
+cmd_status() {
+  local p http gen
+  p="$(site_port)"; p="${p:-$PORT}"
+  if [ -L "$SITE" ] || [ -e "$SITE" ]; then
+    http="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:$p/healthz" 2>/dev/null)"
+    echo "site      : enabled on port $p (healthz HTTP ${http:-no response})"
+  else
+    echo "site      : disabled"
+  fi
+  cron_has && echo "cron      : every 5 min" || echo "cron      : not scheduled"
+  if [ -f "$ROOT/www/data/projects.json" ]; then
+    gen="$(node -e 'const f=process.argv[1];const g=require(f).generatedAt;const m=Math.round((Date.now()-new Date(g))/60000);console.log(`${g.slice(0,16).replace("T"," ")} UTC (${m} min ago)`)' "$ROOT/www/data/projects.json" 2>/dev/null)"
+    echo "data      : ${gen:-present}"
+  else
+    echo "data      : missing — run bin/dash refresh"
+  fi
+}
+
+case "${1:-}" in
+  install)   cmd_install ;;
+  start)     cmd_start ;;
+  stop)      cmd_stop ;;
+  restart)   cmd_stop; cmd_start ;;
+  refresh)   cmd_refresh ;;
+  status)    cmd_status ;;
+  uninstall) cmd_uninstall ;;
+  *) cat <<USAGE
+usage: bin/dash <command>
+
+  install     deps + first data + cron + nginx site   (PORT=8090 by default)
+  start       enable the site and the refresh cron
+  stop        disable both, keep the data
+  restart     stop, then start
+  refresh     regenerate the data now
+  status      what is running right now
+  uninstall   stop, then delete data / logs / node_modules
+
+env: PORT=8091 bin/dash install
+USAGE
+    exit 1 ;;
+esac

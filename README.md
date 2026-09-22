@@ -14,8 +14,9 @@
 .
 ├── bin/aggregate.mjs   # 扫 ~/.claude/projects/**/*.jsonl，按 项目×日期×模型 聚合 + 任务段切分
 ├── bin/refresh.sh      # cron 每 5 分钟跑：ccusage JSON + aggregate.mjs → www/data/
-├── bin/install-nginx.sh# 渲染 nginx 配置并启用站点（需要 sudo）
-├── bin/uninstall-nginx.sh # 停用站点（需要 sudo）
+├── bin/dash            # 唯一入口：install / start / stop / status / refresh / uninstall
+├── bin/install-nginx.sh# 渲染 nginx 配置并启用站点（bin/dash 内部调用）
+├── bin/uninstall-nginx.sh # 停用站点
 ├── nginx/*.template    # 站点模板，安装时替换 __ROOT__ / __PORT__
 ├── www/index.html      # 单文件页面（Chart.js，无构建步骤）
 └── www/data/*.json     # 生成的数据，不进 git
@@ -35,20 +36,44 @@
 ## 安装
 
 ```bash
-npm i                                  # 本地固定 ccusage@20
-( crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/bin/refresh.sh >/dev/null 2>&1" ) | crontab -
-bin/refresh.sh                         # 先手动生成一次数据（约 12 秒）
-sudo PORT=8090 bin/install-nginx.sh    # 渲染 + 启用 nginx 站点
-curl -s http://127.0.0.1:8090/healthz
+git clone https://github.com/ZhangYongguang5467/ccusage-dashboard.git
+cd ccusage-dashboard
+bin/dash install
 ```
 
-仓库不带绝对路径：nginx 配置由 `install-nginx.sh` 按仓库实际位置渲染成 `nginx/ccusage-dashboard.conf`（已 gitignore），`refresh.sh` 和 `aggregate.mjs` 都按脚本自身位置推导路径。
+一条命令做完四件事：装依赖 → 生成一次数据 → 配好每 5 分钟的 cron → 启用 nginx 站点（只在这一步 sudo 一次）。完成后打开 <http://localhost:8090/>。
+
+换端口：`PORT=8091 bin/dash install`
+
+## 启动 / 停止
+
+```bash
+bin/dash status      # 站点、cron、数据新鲜度
+bin/dash stop        # 停站点 + 停 cron，数据保留
+bin/dash start       # 重新启用
+bin/dash refresh     # 立刻重新生成数据
+bin/dash uninstall   # stop + 删掉 data / logs / node_modules（仓库本身不动）
+```
+
+仓库不带绝对路径：nginx 配置由脚本按仓库实际位置渲染成 `nginx/ccusage-dashboard.conf`（已 gitignore），`refresh.sh` 和 `aggregate.mjs` 都按脚本自身位置推导路径。
 
 远程访问建议走 SSH 隧道，不要直接开防火墙——页面含项目路径与费用：
 
 ```bash
 gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
 ```
+
+<details>
+<summary>不想用 bin/dash，手动装</summary>
+
+```bash
+npm i
+bin/refresh.sh
+( crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/bin/refresh.sh >/dev/null 2>&1" ) | crontab -
+sudo PORT=8090 bin/install-nginx.sh     # 停用：sudo bin/uninstall-nginx.sh
+```
+
+</details>
 
 ## 页面内容
 
@@ -83,26 +108,12 @@ gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
 
 key 是项目 id，即 cwd 把 `/` 换成 `-`。
 
-## 启动 / 停止
-
-站点由 nginx 提供，没有常驻进程；"启动"= 启用站点，"关闭"= 停用站点。
-
-```bash
-sudo PORT=8090 bin/install-nginx.sh     # 启用（或换端口重新启用）
-sudo bin/uninstall-nginx.sh             # 停用站点，保留仓库与数据
-crontab -l | grep -v ccusage-dashboard | crontab -   # 停掉定时刷新
-sudo systemctl reload nginx             # 改完配置后重载
-```
-
-彻底清理：`rm -rf www/data logs node_modules nginx/ccusage-dashboard.conf`
-
 ## 运维
 
 ```bash
-bin/refresh.sh                 # 手动刷新
 node bin/aggregate.mjs         # 只重算聚合（跳过 ccusage，约 5 秒）
 tail logs/refresh.log
-crontab -l | grep ccusage      # */5 * * * *
+crontab -l | grep ccusage-dashboard   # */5 * * * *
 npm i ccusage@20               # 升级 ccusage（保持 20.x）
 ```
 
