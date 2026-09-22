@@ -18,15 +18,17 @@ A local dashboard for Claude Code usage: tokens and estimated cost by day, proje
 
 ## Quick start
 
-Requires Node.js ≥ 18, nginx, cron, and Claude Code transcripts on this machine (`~/.claude/projects`).
+Needs only Node.js ≥ 18 and Claude Code transcripts on this machine (`~/.claude/projects`). On Linux with nginx installed the site is served by nginx; otherwise (including macOS) a built-in Node server is used. cron handles the periodic refresh.
 
 ```bash
 git clone https://github.com/ZhangYongguang5467/ccusage-dashboard.git
 cd ccusage-dashboard
-bin/dash install      # deps + data + cron + nginx site; sudo is used only for nginx
+bin/dash install      # deps + data + cron + server; sudo is used only in nginx mode
 ```
 
-Open <http://localhost:8090/>. Another port: `PORT=8091 bin/dash install`.
+Open <http://localhost:8090/>.
+
+If `ccusage` can't be installed (e.g. a corporate npm proxy returns 403), the install still completes: the two billing-window panels show as unavailable and everything else works. A later successful `npm i ccusage@20` restores them automatically.
 
 On a remote machine, use an SSH tunnel (`ssh -L 8090:localhost:8090 <host>`). The page shows project paths and cost — don't expose the port.
 
@@ -41,13 +43,14 @@ On a remote machine, use an SSH tunnel (`ssh -L 8090:localhost:8090 <host>`). Th
 
 ## How it works
 
-Every 5 minutes cron runs `bin/refresh.sh`: ccusage exports its JSON, then `bin/aggregate.mjs` scans `~/.claude/projects/**/*.jsonl` and writes `www/data/*.json`. nginx serves `www/` as-is; the page renders with Chart.js and re-fetches every 2 minutes.
+Every 5 minutes cron runs `bin/refresh.sh`: ccusage exports its JSON, then `bin/aggregate.mjs` scans `~/.claude/projects/**/*.jsonl` and writes `www/data/*.json`. nginx or the built-in server serves `www/` as-is; the page renders with Chart.js and re-fetches every 2 minutes.
 
 ```
 bin/dash              entry point: install / start / stop / status / refresh / uninstall
 bin/refresh.sh        the cron job
 bin/aggregate.mjs     aggregation + task segmentation
-nginx/*.template      site template, rendered with the repo path at install time
+bin/serve.mjs         built-in static server, used when nginx is absent
+nginx/*.template      nginx site template, rendered with the repo path at install time
 www/index.html        the page — single file, no build step
 www/data/             generated data, gitignored
 ```
@@ -62,7 +65,14 @@ www/data/             generated data, gitignored
 
 ## Configuration
 
-- Port: `PORT=8091 bin/dash install`
+Environment variables, passed to `bin/dash install` / `start`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `PORT` | `8090` | Listen port |
+| `SERVER` | auto | `nginx` or `node`; nginx is chosen on Linux with nginx + systemd, the built-in server otherwise |
+| `HOST` | `127.0.0.1` | Bind address of the built-in server (nginx mode listens on all addresses) |
+
 - Project aliases: `www/data/aliases.json` (gitignored), e.g. `{ "-home-me-work-repo": "nicer name" }`; the key is the cwd with `/` replaced by `-`
 - URL params: `?lang=en|zh`, `?theme=dark|light`
 

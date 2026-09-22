@@ -263,6 +263,7 @@ const DICT = {
     low: '低', high: '高', peakAt: (w, h, c) => `峰值 ${w} ${h}:00 · ${c}`,
     bUsed: '本窗口已用', bBurn: '燃烧速率', bProj: '窗口结束预计', bRemain: (m) => `剩余 ${m} 分钟`,
     bNone: '当前没有活跃的计费窗口（最近 5 小时内无请求）。',
+    noCc: 'ccusage 未安装，计费窗口数据不可用（npm i ccusage@20 后会自动恢复）。', noCcShort: 'ccusage 未安装',
     thProj: ['项目', '费用', '占比', '近 14 天', 'Tokens', '请求', '会话', '$/会话', '主模型', '最近活动'],
     tfProj: (n) => `${n} 个项目`,
     thSess: ['最近活动', '项目', '会话', '时长', '请求', 'Tokens', '费用', '$/次', '模型'],
@@ -312,6 +313,7 @@ const DICT = {
     low: 'low', high: 'high', peakAt: (w, h, c) => `peak ${w} ${h}:00 · ${c}`,
     bUsed: 'Used this window', bBurn: 'Burn rate', bProj: 'Projected at window end', bRemain: (m) => `${m} min left`,
     bNone: 'No active billing window (no requests in the last 5 hours).',
+    noCc: 'ccusage is not installed, so billing-window data is unavailable (npm i ccusage@20 restores it).', noCcShort: 'ccusage not installed',
     thProj: ['Project', 'Cost', 'Share', 'Last 14d', 'Tokens', 'Req', 'Sess', '$/session', 'Top model', 'Last active'],
     tfProj: (n) => `${n} projects`,
     thSess: ['Last active', 'Project', 'Session', 'Duration', 'Req', 'Tokens', 'Cost', '$/req', 'Models'],
@@ -482,7 +484,9 @@ function render() {
   const cut = (n, len = 16) => n && n.length > len ? '…' + n.slice(-len + 1) : (n || '-');
   const kpis = [
     { label: T.kCost(rangeLabel), value: money(R.cost), sub: T.kCostSub(tok(R.tokens), money(R.cost / rangeDays, 0)), foot: prevLabel ? `${delta(R.cost, prev.cost)} ${prevLabel} ${money(prev.cost, 0)}` : T.kDaysActive(rangeDays), spark: spark(sparkDates.map((d) => byDay[d]?.cost || 0), accent) },
-    { label: T.kWin, value: int(winsInRange.length), sub: T.kWinSub(tok(Math.max(...winsInRange.map((b) => b.totalTokens), 0))), foot: T.kWinFoot(rangeLabel, money(sum(winsInRange.map((b) => b.costUSD)), 0)) },
+    meta.ccusage === false
+      ? { label: T.kWin, value: '—', sub: T.noCcShort, foot: rangeLabel }
+      : { label: T.kWin, value: int(winsInRange.length), sub: T.kWinSub(tok(Math.max(...winsInRange.map((b) => b.totalTokens), 0))), foot: T.kWinFoot(rangeLabel, money(sum(winsInRange.map((b) => b.costUSD)), 0)) },
     { label: T.kPeak, value: money(peakDay.cost), sub: `${tok(peakDay.tokens)} tokens`, foot: `${rangeLabel} · ${peakDay.date}` },
     { label: T.kTok, value: tok(R.tokens), sub: T.kTokSub(tok(R.input + R.output)), foot: prevLabel ? `${delta(R.tokens, prev.tokens)} ${prevLabel} ${tok(prev.tokens)}` : rangeLabel },
     { label: T.kReq, value: int(R.msgs), sub: T.kReqSub(tok(Math.round(R.tokens / (R.msgs || 1)))), foot: T.kReqFoot(delta(R.msgs, prev.msgs), money(R.cost / (R.msgs || 1))) },
@@ -518,7 +522,7 @@ function render() {
   const wins = (blocks?.blocks || []).filter((b) => !b.isGap && (b.totalTokens > 1e6 || b.isActive)).slice(-12).reverse();
   const winCost = wins.map((b) => b.costUSD);
   const winLabel = (b) => { const d = new Date(b.startTime); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`; };
-  $('#h-blocks').textContent = T.hBlocks(wins.length, tok(Math.max(...wins.map((b) => b.totalTokens), 0)));
+  $('#h-blocks').textContent = meta.ccusage === false ? T.noCc : T.hBlocks(wins.length, tok(Math.max(...wins.map((b) => b.totalTokens), 0)));
   mk('c-blocks', { type: 'bar', data: { labels: wins.map(winLabel), datasets: [{ data: wins.map((b) => b.totalTokens), backgroundColor: wins.map((b) => css(b.isActive ? '--s2' : '--s1')), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.72, categoryPercentage: 0.84 }] },
     options: { indexAxis: 'y', maintainAspectRatio: false, layout: { padding: { right: 56 } },
       scales: { x: { beginAtZero: true, grid: gridOpts(), border: { display: false }, ticks: { callback: (v) => tok(v), maxTicksLimit: 4 } },
@@ -581,7 +585,7 @@ function render() {
       <div class="track"><div class="fill" style="width:${prog.toFixed(1)}%"></div></div>
       <div class="status" style="margin-top:8px;display:flex;justify-content:space-between"><span class="mono">${hm(act.startTime)} → ${hm(act.endTime)}</span><span>${act.models.map((m) => `<span class="badge">${shortModel(m)}</span>`).join(' ')}</span></div>`;
   } else {
-    $('#block').innerHTML = `<div class="status" style="padding:14px 0">${T.bNone}</div>`;
+    $('#block').innerHTML = `<div class="status" style="padding:14px 0">${meta.ccusage === false ? T.noCc : T.bNone}</div>`;
   }
 
   // ---- project table

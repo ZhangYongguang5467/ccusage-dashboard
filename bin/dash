@@ -1,78 +1,112 @@
 #!/usr/bin/env bash
-# One entry point for the dashboard: install / start / stop / status / refresh / uninstall.
-#   bin/dash install          set everything up (deps, data, cron, nginx site)
-#   PORT=8091 bin/dash install   ...on another port
+# One entry point for the dashboard: install / start / stop / restart / status / refresh / uninstall.
+#   bin/dash install                 set everything up
+#   PORT=8091 bin/dash install       ...on another port
+#   SERVER=node bin/dash install     ...force the built-in server even if nginx is present
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-8090}"
 CRON_MARK="$ROOT/bin/refresh.sh"
 SITE=/etc/nginx/sites-enabled/ccusage-dashboard.conf
+PIDF="$ROOT/logs/serve.pid"
+MODEF="$ROOT/logs/server.mode"
 
 die() { echo "error: $*" >&2; exit 1; }
 say() { printf '\033[36m==>\033[0m %s\n' "$*"; }
-[ "$(id -u)" -eq 0 ] && die "run as your normal user — the script calls sudo only for nginx"
+warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
+[ "$(id -u)" -eq 0 ] && die "run as your normal user — sudo is used only for nginx"
+command -v node >/dev/null || die "node not found (need Node.js >= 18)"
+
+# nginx mode needs the Debian/Ubuntu layout + systemd; anything else uses bin/serve.mjs
+detect_mode() {
+  if [ -n "${SERVER:-}" ]; then echo "$SERVER"; return; fi
+  if [ -f "$MODEF" ]; then cat "$MODEF"; return; fi
+  if command -v nginx >/dev/null && [ -d /etc/nginx/sites-enabled ] && command -v systemctl >/dev/null; then echo nginx; else echo node; fi
+}
+MODE="$(detect_mode)"
+[ "$MODE" = nginx ] || [ "$MODE" = node ] || die "SERVER must be nginx or node"
 
 cron_remove() { crontab -l 2>/dev/null | grep -vF "$CRON_MARK" | crontab - 2>/dev/null; }
 cron_add() { { crontab -l 2>/dev/null | grep -vF "$CRON_MARK"; echo "*/5 * * * * $CRON_MARK >/dev/null 2>&1"; } | crontab -; }
 cron_has() { crontab -l 2>/dev/null | grep -qF "$CRON_MARK"; }
-site_port() { [ -e "$ROOT/nginx/ccusage-dashboard.conf" ] && sed -n 's/^ *listen \([0-9]*\);/\1/p' "$ROOT/nginx/ccusage-dashboard.conf" | head -1; }
+
+node_pid() { [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null && cat "$PIDF"; }
+node_start() {
+  if node_pid >/dev/null; then say "built-in server already running (pid $(node_pid))"; return; fi
+  mkdir -p "$ROOT/logs"
+  PORT="$PORT" HOST="${HOST:-127.0.0.1}" nohup node "$ROOT/bin/serve.mjs" >> "$ROOT/logs/serve.log" 2>&1 &
+  echo $! > "$PIDF"; sleep 0.5
+  node_pid >/dev/null || { tail -3 "$ROOT/logs/serve.log" >&2; die "built-in server failed to start"; }
+}
+node_stop() { local p; p="$(node_pid)" && kill "$p" 2>/dev/null; rm -f "$PIDF"; }
+node_port() { [ -f "$ROOT/logs/serve.log" ] && sed -n 's#.*http://[^:]*:\([0-9]*\)/.*#\1#p' "$ROOT/logs/serve.log" | tail -1; }
+nginx_port() { [ -e "$ROOT/nginx/ccusage-dashboard.conf" ] && sed -n 's/^ *listen \([0-9]*\);/\1/p' "$ROOT/nginx/ccusage-dashboard.conf" | head -1; }
+
+serve_start() {
+  mkdir -p "$ROOT/logs"; echo "$MODE" > "$MODEF"
+  if [ "$MODE" = nginx ]; then
+    say "enabling nginx site on port $PORT (needs sudo)"
+    local out; out="$(sudo PORT="$PORT" "$ROOT/bin/install-nginx.sh" 2>&1)" || { echo "$out" >&2; die "nginx setup failed"; }
+  else
+    say "starting built-in server on port $PORT"
+    node_start
+  fi
+}
+serve_stop() {
+  if [ "$MODE" = nginx ]; then
+    say "disabling nginx site (needs sudo)"
+    local out; out="$(sudo "$ROOT/bin/uninstall-nginx.sh" 2>&1)" || { echo "$out" >&2; die "could not disable the site"; }
+  else
+    say "stopping built-in server"; node_stop
+  fi
+}
 
 cmd_install() {
-  local out
   say "installing dependencies"
-  ( cd "$ROOT" && npm i --no-fund --no-audit --loglevel=error ) || die "npm i failed"
+  if ! ( cd "$ROOT" && npm i --no-fund --no-audit --loglevel=error ); then
+    warn "npm i failed — continuing without ccusage. Billing-window panels will be empty; everything else works."
+    warn "check: npm config get registry   (a proxy/policy may block registry.npmjs.org)"
+  fi
   say "generating data (first run takes ~15s)"
   "$ROOT/bin/refresh.sh" || die "refresh failed — see $ROOT/logs/refresh.log"
   say "scheduling refresh every 5 minutes"
   cron_add || die "could not write crontab"
-  say "enabling nginx site on port $PORT (needs sudo)"
-  out="$(sudo PORT="$PORT" "$ROOT/bin/install-nginx.sh" 2>&1)" || { echo "$out" >&2; die "nginx setup failed"; }
+  serve_start
   echo
   say "ready: http://localhost:$PORT/"
   cmd_status
 }
-
-cmd_start() {
-  local out
-  say "enabling nginx site on port $PORT (needs sudo)"
-  out="$(sudo PORT="$PORT" "$ROOT/bin/install-nginx.sh" 2>&1)" || { echo "$out" >&2; die "nginx setup failed"; }
-  cron_add
-  cmd_status
-}
-
-cmd_stop() {
-  local out
-  say "disabling nginx site (needs sudo)"
-  out="$(sudo "$ROOT/bin/uninstall-nginx.sh" 2>&1)" || { echo "$out" >&2; die "could not disable the site"; }
-  cron_remove
-  say "stopped: site disabled, cron entry removed (data kept)"
-}
-
+cmd_start() { serve_start; cron_add; cmd_status; }
+cmd_stop() { serve_stop; cron_remove; say "stopped: server off, cron entry removed (data kept)"; }
 cmd_uninstall() {
   cmd_stop
   say "removing generated data, logs and node_modules"
-  rm -rf "$ROOT/www/data" "$ROOT/logs" "$ROOT/node_modules"
+  rm -rf "$ROOT/www/data" "$ROOT/logs" "$ROOT/node_modules" "$ROOT/nginx/ccusage-dashboard.conf"
   say "uninstalled (the repo itself is untouched)"
 }
-
 cmd_refresh() { "$ROOT/bin/refresh.sh" && say "refreshed" && cmd_status; }
 
 cmd_status() {
   local p http gen
-  p="$(site_port)"; p="${p:-$PORT}"
-  if [ -L "$SITE" ] || [ -e "$SITE" ]; then
-    http="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:$p/healthz" 2>/dev/null)"
-    echo "site      : enabled on port $p (healthz HTTP ${http:-no response})"
+  if [ "$MODE" = nginx ]; then
+    if [ -L "$SITE" ] || [ -e "$SITE" ]; then
+      p="$(nginx_port)"; p="${p:-$PORT}"
+      http="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:$p/healthz" 2>/dev/null)"
+      echo "server    : nginx, port $p (healthz HTTP ${http:-no response})"
+    else echo "server    : nginx site disabled"; fi
   else
-    echo "site      : disabled"
+    if node_pid >/dev/null; then
+      p="$(node_port)"; p="${p:-$PORT}"
+      http="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:$p/healthz" 2>/dev/null)"
+      echo "server    : built-in (pid $(node_pid)), port $p (healthz HTTP ${http:-no response})"
+    else echo "server    : built-in, not running"; fi
   fi
   cron_has && echo "cron      : every 5 min" || echo "cron      : not scheduled"
+  [ -x "$ROOT/node_modules/.bin/ccusage" ] && echo "ccusage   : $("$ROOT/node_modules/.bin/ccusage" --version 2>/dev/null)" || echo "ccusage   : not installed (billing windows disabled)"
   if [ -f "$ROOT/www/data/projects.json" ]; then
-    gen="$(node -e 'const f=process.argv[1];const g=require(f).generatedAt;const m=Math.round((Date.now()-new Date(g))/60000);console.log(`${g.slice(0,16).replace("T"," ")} UTC (${m} min ago)`)' "$ROOT/www/data/projects.json" 2>/dev/null)"
+    gen="$(node -e 'const g=require(process.argv[1]).generatedAt;const m=Math.round((Date.now()-new Date(g))/60000);console.log(`${g.slice(0,16).replace("T"," ")} UTC (${m} min ago)`)' "$ROOT/www/data/projects.json" 2>/dev/null)"
     echo "data      : ${gen:-present}"
-  else
-    echo "data      : missing — run bin/dash refresh"
-  fi
+  else echo "data      : missing — run bin/dash refresh"; fi
 }
 
 case "${1:-}" in
@@ -86,15 +120,17 @@ case "${1:-}" in
   *) cat <<USAGE
 usage: bin/dash <command>
 
-  install     deps + first data + cron + nginx site   (PORT=8090 by default)
-  start       enable the site and the refresh cron
-  stop        disable both, keep the data
+  install     deps + first data + cron + web server      (PORT=8090 by default)
+  start       start the server and the refresh cron
+  stop        stop both, keep the data
   restart     stop, then start
   refresh     regenerate the data now
   status      what is running right now
   uninstall   stop, then delete data / logs / node_modules
 
-env: PORT=8091 bin/dash install
+env: PORT=8091        listen port
+     SERVER=node      use the built-in server even if nginx is installed (default on macOS)
+     HOST=0.0.0.0     built-in server bind address (default 127.0.0.1)
 USAGE
     exit 1 ;;
 esac

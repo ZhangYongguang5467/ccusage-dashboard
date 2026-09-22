@@ -18,15 +18,17 @@
 
 ## 快速开始
 
-需要 Node.js ≥ 18、nginx、cron，以及本机的 Claude Code 会话记录（`~/.claude/projects`）。
+只需要 Node.js ≥ 18 和本机的 Claude Code 会话记录（`~/.claude/projects`）。Linux 上装了 nginx 会自动用它做静态服务，否则（含 macOS）用内置的 Node 服务器；cron 用于定时刷新。
 
 ```bash
 git clone https://github.com/ZhangYongguang5467/ccusage-dashboard.git
 cd ccusage-dashboard
-bin/dash install      # 依赖 + 数据 + cron + nginx 站点；仅 nginx 一步需要 sudo
+bin/dash install      # 依赖 + 数据 + cron + 启动服务；只有 nginx 模式那一步需要 sudo
 ```
 
-打开 <http://localhost:8090/>。换端口：`PORT=8091 bin/dash install`。
+打开 <http://localhost:8090/>。
+
+`ccusage` 装不上（如公司 npm 代理返回 403）也不会中断安装：只是「计费窗口」两块面板显示为不可用，其余功能正常；之后 `npm i ccusage@20` 成功即自动恢复。
 
 远程机器请走 SSH 隧道（`ssh -L 8090:localhost:8090 <host>`）。页面含项目路径与费用，不建议对外开放端口。
 
@@ -41,13 +43,14 @@ bin/dash install      # 依赖 + 数据 + cron + nginx 站点；仅 nginx 一步
 
 ## 工作原理
 
-cron 每 5 分钟运行 `bin/refresh.sh`：先用 ccusage 导出 JSON，再由 `bin/aggregate.mjs` 扫描 `~/.claude/projects/**/*.jsonl` 聚合为 `www/data/*.json`。nginx 直接服务 `www/`；页面用 Chart.js 渲染，每 2 分钟自动重拉。
+cron 每 5 分钟运行 `bin/refresh.sh`：先用 ccusage 导出 JSON，再由 `bin/aggregate.mjs` 扫描 `~/.claude/projects/**/*.jsonl` 聚合为 `www/data/*.json`。nginx 或内置服务器直接服务 `www/`；页面用 Chart.js 渲染，每 2 分钟自动重拉。
 
 ```
 bin/dash              入口：install / start / stop / status / refresh / uninstall
 bin/refresh.sh        cron 任务
 bin/aggregate.mjs     聚合 + 任务段切分
-nginx/*.template      站点模板，安装时按仓库路径渲染
+bin/serve.mjs         内置静态服务器（无 nginx 时使用）
+nginx/*.template      nginx 站点模板，安装时按仓库路径渲染
 www/index.html        页面，单文件，无构建
 www/data/             生成数据，不入库
 ```
@@ -62,7 +65,14 @@ www/data/             生成数据，不入库
 
 ## 配置
 
-- 端口：`PORT=8091 bin/dash install`
+环境变量在 `bin/dash install` / `start` 时传入：
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `PORT` | `8090` | 监听端口 |
+| `SERVER` | 自动 | `nginx` 或 `node`；Linux + nginx + systemd 时选 nginx，否则用内置服务器 |
+| `HOST` | `127.0.0.1` | 内置服务器绑定地址（nginx 模式固定监听全部地址） |
+
 - 项目别名：`www/data/aliases.json`（不入库），如 `{ "-home-me-work-repo": "nicer name" }`；key 为 cwd 中 `/` 替换为 `-`
 - URL 参数：`?lang=en|zh`、`?theme=dark|light`
 
