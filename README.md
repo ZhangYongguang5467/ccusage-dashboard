@@ -1,8 +1,14 @@
 # ccusage-dashboard
 
-本机 Claude Code 用量看板：按天 / 项目 / 模型 / 任务展示 token 消耗与估算费用。
+[English](README.en.md) · 简体中文
+
+本机 Claude Code 用量看板：按天 / 项目 / 模型 / 任务展示 token 消耗与估算费用。中英双语，跟随系统深浅色。
 
 纯静态页面 + cron 定时生成 JSON，nginx 只做静态文件服务，不需要后端进程。
+
+![截图](docs/screenshot-zh.png)
+
+> 截图用的是脱敏后的演示数据。
 
 ```
 .
@@ -10,7 +16,7 @@
 ├── bin/refresh.sh      # cron 每 5 分钟跑：ccusage JSON + aggregate.mjs → www/data/
 ├── bin/install-nginx.sh# 渲染 nginx 配置并启用站点（需要 sudo）
 ├── nginx/*.template    # 站点模板，安装时替换 __ROOT__ / __PORT__
-├── www/index.html      # 单文件页面（Chart.js，跟随系统深浅色，?theme=dark 可强制）
+├── www/index.html      # 单文件页面（Chart.js，无构建步骤）
 └── www/data/*.json     # 生成的数据，不进 git
 ```
 
@@ -42,6 +48,8 @@ gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
 - **当前 5 小时计费窗口**：来自 ccusage blocks，对照 Max/Pro 套餐额度
 - **项目明细** / **最近会话** 表
 
+右上角三个按钮：`文 / EN` 切换中英、`◐` 切换深浅色、`↻` 重新拉取。选择存在 localStorage，也可以用 `?lang=en` / `?theme=dark` 直接指定。
+
 ## 数据口径
 
 - 费用 = token 数 × LiteLLM 公开价格（input / output / cache 5m 写 / cache 1h 写 / cache 读分别计价），每 24h 拉一次价格表缓存到 `www/data/pricing.json`。**是估算值，订阅套餐不按此付费。**
@@ -53,13 +61,15 @@ gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
 - 计费窗口来自 ccusage blocks，**含本机其他 agent（codex / kimi 等）的用量**，所以窗口合计会大于本页 Claude Code 的费用。
 - 页面底部有与 ccusage 的对账行。
 
-## 页面配置
+## 项目显示别名
 
-`www/index.html` 顶部的 `PROJECT_ALIAS` 可以给项目起显示别名（key 是项目 id，即 cwd 把 `/` 换成 `-`）：
+想给项目起个好看的名字，放到 `www/data/aliases.json`（已 gitignore，不会进仓库）：
 
-```js
-const PROJECT_ALIAS = { '-home-jack-workspace-github-english-lessons': 'ai-practice' };
+```json
+{ "-home-me-work-some-repo": "nicer name" }
 ```
+
+key 是项目 id，即 cwd 把 `/` 换成 `-`。
 
 ## 运维
 
@@ -73,4 +83,8 @@ npm i ccusage@20               # 升级 ccusage（保持 20.x）
 
 ## 注意
 
-`www/data/` 已 gitignore：里面含项目绝对路径、任务级明细和主机名。别把生成的数据提交上去，仓库本身也建议保持私有。
+`www/data/` 已 gitignore：里面含项目绝对路径、任务级明细和主机名。别把生成的数据提交上去。
+
+## License
+
+MIT

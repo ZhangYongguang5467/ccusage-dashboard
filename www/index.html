@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Code 用量监控</title>
+<title>Claude Code Usage</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b0f17'/><rect x='18' y='52' width='14' height='30' rx='3' fill='%233987e5'/><rect x='43' y='30' width='14' height='52' rx='3' fill='%233987e5'/><rect x='68' y='18' width='14' height='64' rx='3' fill='%233987e5'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -127,21 +127,22 @@ footer code { font-family: "JetBrains Mono", monospace; font-size: 11px; color: 
   <div class="brand">
     <div class="logo"><svg viewBox="0 0 16 16" fill="none"><rect x="1" y="8" width="3.2" height="7" rx="1" fill="#fff"/><rect x="6.4" y="4" width="3.2" height="11" rx="1" fill="#fff"/><rect x="11.8" y="1" width="3.2" height="14" rx="1" fill="#fff"/></svg></div>
     <div>
-      <h1>Claude Code 用量监控</h1>
-      <div class="meta" id="meta">加载中…</div>
+      <h1 data-i18n="appTitle">Claude Code 用量监控</h1>
+      <div class="meta" id="meta" data-i18n="loading">加载中…</div>
     </div>
   </div>
   <div class="right">
     <div class="live"><span class="dot" id="dot"></span><span id="live">—</span></div>
-    <div class="chips" id="range" role="group" aria-label="时间范围">
+    <div class="chips" id="range" role="group" data-i18n-aria="rangeAria" aria-label="时间范围">
       <button data-days="1">1D</button>
       <button data-days="7" aria-pressed="true">7D</button>
       <button data-days="30">30D</button>
       <button data-days="90">90D</button>
       <button data-days="0">ALL</button>
     </div>
-    <button class="btn" id="theme" title="切换深浅色">◐</button>
-    <button class="btn" id="reload" title="重新拉取数据">↻</button>
+    <button class="btn" id="lang" data-i18n-title="langTip" title="English">文</button>
+    <button class="btn" id="theme" data-i18n-title="themeTip" title="切换深浅色">◐</button>
+    <button class="btn" id="reload" data-i18n-title="reloadTip" title="重新拉取数据">↻</button>
   </div>
 </div>
 
@@ -149,46 +150,46 @@ footer code { font-family: "JetBrains Mono", monospace; font-size: 11px; color: 
 
 <section class="grid">
   <div class="panel c8">
-    <div class="ph"><h2>每日费用 · 按模型</h2><span class="hint" id="h-daily"></span></div>
+    <div class="ph"><h2 data-i18n="pDaily">每日费用 · 按模型</h2><span class="hint" id="h-daily"></span></div>
     <div class="plot" style="height:372px"><canvas id="c-daily-model"></canvas></div>
   </div>
   <div class="panel c4">
-    <div class="ph"><h2>项目费用排行 &amp; 请求数</h2><span class="hint" id="h-rank"></span></div>
+    <div class="ph"><h2 data-i18n="pRank">项目费用排行 &amp; 请求数</h2><span class="hint" id="h-rank"></span></div>
     <div class="plot tall" style="height:372px"><canvas id="c-project-rank"></canvas></div>
   </div>
 
   <div class="panel c8">
-    <div class="ph"><h2>各项目每日费用</h2><span class="hint">按累计费用取前 7 项，其余归入「其他」；颜色固定跟随项目</span></div>
+    <div class="ph"><h2 data-i18n="pProjDaily">各项目每日费用</h2><span class="hint" data-i18n="hProjDaily">按累计费用取前 7 项，其余归入「其他」；颜色固定跟随项目</span></div>
     <div class="plot" style="height:300px"><canvas id="c-daily-project"></canvas></div>
   </div>
   <div class="panel c4">
-    <div class="ph"><h2>计费窗口历史</h2><span class="hint" id="h-blocks"></span></div>
+    <div class="ph"><h2 data-i18n="pBlocks">计费窗口历史</h2><span class="hint" id="h-blocks"></span></div>
     <div class="plot" style="height:300px"><canvas id="c-blocks"></canvas></div>
   </div>
 
   <div class="panel c6">
-    <div class="ph"><h2>每日活跃度</h2><span class="hint">会话数 = 当日有请求的会话；请求数 = assistant 回复条数</span></div>
-    <div class="sub-h">会话数</div>
+    <div class="ph"><h2 data-i18n="pActivity">每日活跃度</h2><span class="hint" data-i18n="hActivity">会话数 = 当日有请求的会话；请求数 = assistant 回复条数</span></div>
+    <div class="sub-h" data-i18n="lSessions">会话数</div>
     <div class="plot mini"><canvas id="c-sessions"></canvas></div>
-    <div class="sub-h">请求数</div>
+    <div class="sub-h" data-i18n="lRequests">请求数</div>
     <div class="plot mini"><canvas id="c-msgs"></canvas></div>
   </div>
   <div class="panel c6">
-    <div class="ph"><h2>活跃时段热力图</h2><span class="hint">星期 × 小时 · 本机时区 · 全部历史</span></div>
+    <div class="ph"><h2 data-i18n="pHeat">活跃时段热力图</h2><span class="hint" data-i18n="hHeat">星期 × 小时 · 本机时区 · 全部历史</span></div>
     <div class="heatwrap"><div class="heat" id="heat"></div></div>
     <div class="legend-seq" id="heat-legend"></div>
   </div>
   <div class="panel">
-    <div class="ph"><h2>当前 5 小时计费窗口</h2><span class="hint">ccusage blocks · 对照 Max/Pro 套餐额度</span></div>
+    <div class="ph"><h2 data-i18n="pBlock">当前 5 小时计费窗口</h2><span class="hint" data-i18n="hBlock">ccusage blocks · 对照 Max/Pro 套餐额度</span></div>
     <div id="block"></div>
   </div>
 
   <div class="panel">
-    <div class="ph"><h2>项目明细</h2><span class="hint" id="h-proj"></span></div>
+    <div class="ph"><h2 data-i18n="pProjects">项目明细</h2><span class="hint" id="h-proj"></span></div>
     <div class="tw"><table id="t-projects"></table></div>
   </div>
   <div class="panel">
-    <div class="ph"><h2>最近会话</h2><span class="hint">最近 30 个会话</span></div>
+    <div class="ph"><h2 data-i18n="pSessions">最近会话</h2><span class="hint" data-i18n="hSessions">最近 30 个会话</span></div>
     <div class="tw"><table id="t-sessions"></table></div>
   </div>
 </section>
@@ -203,8 +204,10 @@ const $ = (s) => document.querySelector(s);
 const state = { days: 7, data: null, charts: {}, timer: null, loadedAt: 0, error: null };
 const REFRESH_MS = 2 * 60 * 1000;
 const SLOTS = ['--s1','--s2','--s3','--s4','--s5','--s6','--s7','--s8'];
-// 项目显示名别名：key = 项目 id，只影响页面展示
-const PROJECT_ALIAS = { '-home-jack-workspace-github-english-lessons': 'ai-practice' };
+// Display-name aliases for projects: key = project id (cwd with '/' replaced by '-').
+// Ships empty on purpose; put your own in www/data/aliases.json (gitignored), e.g.
+//   { "-home-me-work-some-repo": "nicer name" }
+let PROJECT_ALIAS = {};
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const money = (v, d = 2) => '$' + (v ?? 0).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const int = (v) => (v ?? 0).toLocaleString('en-US');
@@ -213,10 +216,129 @@ const pct = (v, d = 1) => (v * 100).toFixed(d) + '%';
 const pad = (n) => String(n).padStart(2, '0');
 const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const fmtTime = (iso) => { const d = new Date(iso); return isNaN(d) ? '-' : `${ymd(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const rel = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (isNaN(s)) return '-'; if (s < 60) return '刚刚'; if (s < 3600) return `${Math.floor(s / 60)} 分钟前`; if (s < 86400) return `${Math.floor(s / 3600)} 小时前`; if (s < 86400 * 30) return `${Math.floor(s / 86400)} 天前`; return ymd(new Date(iso)); };
+const rel = (iso) => { const s = (Date.now() - new Date(iso)) / 1000; if (isNaN(s)) return '-'; if (s < 60) return T.justNow; if (s < 3600) return T.minAgo(Math.floor(s / 60)); if (s < 86400) return T.hourAgo(Math.floor(s / 3600)); if (s < 86400 * 30) return T.dayAgo(Math.floor(s / 86400)); return ymd(new Date(iso)); };
 const shortModel = (m) => m.replace(/^claude-/, '').replace(/-\d{8}$/, '');
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const sum = (a) => a.reduce((s, v) => s + (v || 0), 0);
+
+// ---------- i18n ----------
+const DICT = {
+  zh: {
+    appTitle: 'Claude Code 用量监控', loading: '加载中…', rangeAria: '时间范围',
+    langTip: 'English', themeTip: '切换深浅色', reloadTip: '重新拉取数据', langBtn: '文',
+    pDaily: '每日费用 · 按模型', pRank: '项目费用排行 & 请求数', pProjDaily: '各项目每日费用',
+    hProjDaily: '按累计费用取前 7 项，其余归入「其他」；颜色固定跟随项目',
+    pBlocks: '计费窗口历史', pActivity: '每日活跃度',
+    hActivity: '会话数 = 当日有请求的会话；请求数 = assistant 回复条数',
+    lSessions: '会话数', lRequests: '请求数',
+    pHeat: '活跃时段热力图', hHeat: '星期 × 小时 · 本机时区 · 全部历史',
+    pBlock: '当前 5 小时计费窗口', hBlock: 'ccusage blocks · 对照 Max/Pro 套餐额度',
+    pProjects: '项目明细', pSessions: '最近会话', hSessions: '最近 30 个会话',
+    justNow: '刚刚', minAgo: (n) => `${n} 分钟前`, hourAgo: (n) => `${n} 小时前`, dayAgo: (n) => `${n} 天前`,
+    loadFail: (e) => '加载失败: ' + e,
+    live: (age, mmss) => `数据 <span class="mono">${age} 分钟前</span> · 下次刷新 <span class="mono">${mmss}</span>`,
+    range: (d, f) => d === 1 ? '今日' : d ? `近 ${d} 天` : `全部（自 ${f}）`,
+    prev: (d) => d === 1 ? '昨日' : d ? `上一个 ${d} 天` : '',
+    meta: (m) => `${m.host} · ${m.tz} · ${m.projects} 个项目 · ${m.sessions} 个会话 · ${m.msgs} 条请求 · ${m.tokens} tokens · 累计 ${m.cost} · 数据生成于 ${m.gen}`,
+    hDaily: (r) => `${r} · 柱顶为当日费用与 token · 虚线为 7 日均线`,
+    hRank: (r) => `${r} · 灰条为请求数`,
+    hProj: (r) => `${r} 的费用 / Token / 请求；会话数与最近活动为全部历史`,
+    hBlocks: (n, peak) => `近 ${n} 个有用量的窗口 · 峰值 ${peak}`,
+    kCost: (r) => `费用 · ${r}`, kCostSub: (t, avg) => `${t} tokens · 日均 ${avg}`, kDaysActive: (d) => `${d} 个活跃日`,
+    kWin: '计费窗口', kWinSub: (m) => `最高 ${m}`, kWinFoot: (r, c) => `${r} · 合计 ${c}（含其他 agent）`,
+    kPeak: '单日峰值',
+    kTok: 'Token 用量', kTokSub: (io) => `输入+输出 ${io}`,
+    kReq: '请求数', kReqSub: (t) => `均 ${t} tokens/次`, kReqFoot: (d, c) => `${d} 均 ${c}/次`,
+    kSess: '会话数', kSessSub: (c) => `均 ${c}/会话`, kSessFoot: (r, n) => `${r} · 全部历史 ${n} 个`,
+    kProj: '活跃项目', kProjFoot: (r, p) => `${r} · 占 ${p}`,
+    kCx: '任务复杂度', kCxVal: (n) => `${n}<small>轮 / 任务</small>`,
+    kCxSub: (d, t, c) => `中位 ${d} · ${t} 次工具 · ${c}`,
+    kCxFoot: (r, n, h) => `${r} · ${n} 个实质任务 · 重任务 ${h}`,
+    kCxTip: (w, a, h, ctx) => `以上都是中位数。任务段 = 一条用户提示到下一条之间的所有回合；实质任务 = 至少 1 次工具调用或 ≥3 轮（本区间 ${w}/${a}）；重任务 = 压缩过上下文 / ≥20 次工具 / 上下文 ≥500K，共 ${h} 个；中位上下文 ${ctx}`,
+    total: (v) => '合计 ' + v,
+    tokBreak: (t, i, o, cw, cr) => `Token ${t} · 输入 ${i} · 输出 ${o} · 缓存写 ${cw} · 缓存读 ${cr}`,
+    dsMA: '7 日均线', dsCost: '费用', dsOther: '其他',
+    active: ' 进行中', nReq: (n) => `${n} 次请求`,
+    week: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+    low: '低', high: '高', peakAt: (w, h, c) => `峰值 ${w} ${h}:00 · ${c}`,
+    bUsed: '本窗口已用', bBurn: '燃烧速率', bProj: '窗口结束预计', bRemain: (m) => `剩余 ${m} 分钟`,
+    bNone: '当前没有活跃的计费窗口（最近 5 小时内无请求）。',
+    thProj: ['项目', '费用', '占比', '近 14 天', 'Tokens', '请求', '会话', '$/会话', '主模型', '最近活动'],
+    tfProj: (n) => `${n} 个项目`,
+    thSess: ['最近活动', '项目', '会话', '时长', '请求', 'Tokens', '费用', '$/次', '模型'],
+    foot1: (price, cc) => `数据来源：<code>bin/aggregate.mjs</code> 扫描 <code>~/.claude/projects/**/*.jsonl</code>，按 项目 × 日期 × 模型 聚合；定价取 LiteLLM 公开价格表（${price}），5 分钟 / 1 小时缓存写入分别计价。计费窗口来自 ccusage ${cc}。`,
+    priceAt: (t) => '更新于 ' + t, priceCached: '缓存',
+    foot2: (ccTotal, agents, mine, diff, others, unknown) =>
+      `对账：ccusage 累计 ${ccTotal}（含 ${agents}），本页 Claude Code 累计 ${mine}${diff ? `，差额 ${diff}${others ? ` 为 ${others} 的用量` : ''}` : ''}。${unknown ? `<span class="status err">未找到定价的模型：${unknown}</span>` : ''}`,
+    foot3: (sec, ok) => `刷新：cron 每 5 分钟执行 <code>bin/refresh.sh</code>（上次耗时 ${sec} 秒，${ok ? '正常' : '<span class="status err">有错误，见 logs/refresh.log</span>'}），页面每 2 分钟自动重新拉取。费用为按公开 API 价格的估算，订阅套餐不按此付费。`,
+  },
+  en: {
+    appTitle: 'Claude Code Usage', loading: 'Loading…', rangeAria: 'Time range',
+    langTip: '中文', themeTip: 'Toggle theme', reloadTip: 'Reload data', langBtn: 'EN',
+    pDaily: 'Daily cost · by model', pRank: 'Project cost & requests', pProjDaily: 'Daily cost by project',
+    hProjDaily: 'Top 7 by total cost, rest grouped as "Other"; colors are pinned per project',
+    pBlocks: 'Billing window history', pActivity: 'Daily activity',
+    hActivity: 'Sessions = sessions with requests that day; requests = assistant replies',
+    lSessions: 'Sessions', lRequests: 'Requests',
+    pHeat: 'Activity heatmap', hHeat: 'Weekday × hour · local time · all history',
+    pBlock: 'Current 5-hour billing window', hBlock: 'ccusage blocks · against Max/Pro limits',
+    pProjects: 'Projects', pSessions: 'Recent sessions', hSessions: 'Last 30 sessions',
+    justNow: 'just now', minAgo: (n) => `${n} min ago`, hourAgo: (n) => `${n} h ago`, dayAgo: (n) => `${n} d ago`,
+    loadFail: (e) => 'Load failed: ' + e,
+    live: (age, mmss) => `data <span class="mono">${age} min old</span> · next refresh <span class="mono">${mmss}</span>`,
+    range: (d, f) => d === 1 ? 'Today' : d ? `Last ${d} days` : `All time (since ${f})`,
+    prev: (d) => d === 1 ? 'yesterday' : d ? `prev ${d} days` : '',
+    meta: (m) => `${m.host} · ${m.tz} · ${m.projects} projects · ${m.sessions} sessions · ${m.msgs} requests · ${m.tokens} tokens · ${m.cost} total · generated ${m.gen}`,
+    hDaily: (r) => `${r} · bar labels: cost and tokens · dashed line: 7-day average`,
+    hRank: (r) => `${r} · gray bars are requests`,
+    hProj: (r) => `Cost / tokens / requests for ${r}; sessions and last activity are all-time`,
+    hBlocks: (n, peak) => `last ${n} active windows · peak ${peak}`,
+    kCost: (r) => `Cost · ${r}`, kCostSub: (t, avg) => `${t} tokens · ${avg}/day`, kDaysActive: (d) => `${d} active days`,
+    kWin: 'Billing windows', kWinSub: (m) => `peak ${m}`, kWinFoot: (r, c) => `${r} · ${c} total (incl. other agents)`,
+    kPeak: 'Busiest day',
+    kTok: 'Tokens', kTokSub: (io) => `input+output ${io}`,
+    kReq: 'Requests', kReqSub: (t) => `${t} tokens/req`, kReqFoot: (d, c) => `${d} ${c}/req`,
+    kSess: 'Sessions', kSessSub: (c) => `${c}/session`, kSessFoot: (r, n) => `${r} · ${n} all-time`,
+    kProj: 'Active projects', kProjFoot: (r, p) => `${r} · ${p} of spend`,
+    kCx: 'Task complexity', kCxVal: (n) => `${n}<small>turns / task</small>`,
+    kCxSub: (d, t, c) => `median ${d} · ${t} tools · ${c}`,
+    kCxFoot: (r, n, h) => `${r} · ${n} real tasks · ${h} heavy`,
+    kCxTip: (w, a, h, ctx) => `All medians. A task = one user prompt through the turns before the next one; "real task" = at least 1 tool call or >=3 turns (${w}/${a} in range); "heavy" = context compacted / >=20 tool calls / context >=500K, ${h} in range; median context ${ctx}`,
+    total: (v) => 'total ' + v,
+    tokBreak: (t, i, o, cw, cr) => `tokens ${t} · in ${i} · out ${o} · cache write ${cw} · cache read ${cr}`,
+    dsMA: '7-day avg', dsCost: 'Cost', dsOther: 'Other',
+    active: ' (active)', nReq: (n) => `${n} requests`,
+    week: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    low: 'low', high: 'high', peakAt: (w, h, c) => `peak ${w} ${h}:00 · ${c}`,
+    bUsed: 'Used this window', bBurn: 'Burn rate', bProj: 'Projected at window end', bRemain: (m) => `${m} min left`,
+    bNone: 'No active billing window (no requests in the last 5 hours).',
+    thProj: ['Project', 'Cost', 'Share', 'Last 14d', 'Tokens', 'Req', 'Sess', '$/session', 'Top model', 'Last active'],
+    tfProj: (n) => `${n} projects`,
+    thSess: ['Last active', 'Project', 'Session', 'Duration', 'Req', 'Tokens', 'Cost', '$/req', 'Models'],
+    foot1: (price, cc) => `Source: <code>bin/aggregate.mjs</code> scans <code>~/.claude/projects/**/*.jsonl</code> and aggregates by project × date × model; pricing from the public LiteLLM table (${price}), 5-minute and 1-hour cache writes priced separately. Billing windows come from ccusage ${cc}.`,
+    priceAt: (t) => 'updated ' + t, priceCached: 'cached',
+    foot2: (ccTotal, agents, mine, diff, others, unknown) =>
+      `Reconciliation: ccusage total ${ccTotal} (incl. ${agents}); Claude Code on this page ${mine}${diff ? `, difference ${diff}${others ? ` from ${others}` : ''}` : ''}.${unknown ? `<span class="status err">No pricing found for: ${unknown}</span>` : ''}`,
+    foot3: (sec, ok) => `Refresh: cron runs <code>bin/refresh.sh</code> every 5 min (last run ${sec}s, ${ok ? 'ok' : '<span class="status err">errors — see logs/refresh.log</span>'}); the page re-fetches every 2 min. Costs are estimates at public API prices — subscription plans are not billed this way.`,
+  },
+};
+let lang = 'zh';
+try {
+  const q = new URLSearchParams(location.search).get('lang');
+  const st = localStorage.getItem('cc2-lang');
+  lang = q || st || ((navigator.language || '').toLowerCase().startsWith('zh') ? 'zh' : 'en');
+} catch {}
+if (lang !== 'en' && lang !== 'zh') lang = 'zh';
+let T = DICT[lang];
+function applyLang() {
+  T = DICT[lang];
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.title = T.appTitle;
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = T[el.dataset.i18n];
+  for (const el of document.querySelectorAll('[data-i18n-title]')) el.title = T[el.dataset.i18nTitle];
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', T[el.dataset.i18nAria]);
+  const b = $('#lang'); if (b) b.textContent = T.langBtn;
+}
 
 // ---------- theme ----------
 function applyTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem('cc2-theme', t); } catch {} }
@@ -230,12 +352,15 @@ for (const b of document.querySelectorAll('#range button')) {
   b.onclick = () => { state.days = +b.dataset.days; try { localStorage.setItem('cc2-days', state.days); } catch {} for (const x of document.querySelectorAll('#range button')) x.setAttribute('aria-pressed', String(x === b)); render(); };
 }
 $('#reload').onclick = () => load();
+$('#lang').onclick = () => { lang = lang === 'zh' ? 'en' : 'zh'; try { localStorage.setItem('cc2-lang', lang); } catch {} applyLang(); render(); };
+applyLang();
 
 // ---------- load ----------
 async function getJSON(name) { const r = await fetch(`data/${name}.json?t=${Date.now()}`, { cache: 'no-store' }); if (!r.ok) throw new Error(`${name}.json HTTP ${r.status}`); return r.json(); }
 async function load() {
   try {
-    const [projects, meta, blocks, daily] = await Promise.all([getJSON('projects'), getJSON('meta'), getJSON('blocks').catch(() => null), getJSON('daily').catch(() => null)]);
+    const [projects, meta, blocks, daily, aliases] = await Promise.all([getJSON('projects'), getJSON('meta'), getJSON('blocks').catch(() => null), getJSON('daily').catch(() => null), getJSON('aliases').catch(() => ({}))]);
+    PROJECT_ALIAS = aliases && typeof aliases === 'object' ? aliases : {};
     state.data = { projects, meta, blocks, daily }; state.loadedAt = Date.now(); state.error = null;
     render();
   } catch (e) { state.error = e.message; console.error(e); tickLive(); }
@@ -243,13 +368,13 @@ async function load() {
 }
 function tickLive() {
   const dot = $('#dot'), live = $('#live');
-  if (state.error) { dot.className = 'dot err'; live.textContent = '加载失败: ' + state.error; return; }
+  if (state.error) { dot.className = 'dot err'; live.textContent = T.loadFail(state.error); return; }
   if (!state.data) return;
   const gen = new Date(state.data.projects.generatedAt);
   const ageMin = Math.floor((Date.now() - gen) / 60000);
   const left = Math.max(0, Math.ceil((state.loadedAt + REFRESH_MS - Date.now()) / 1000));
   dot.className = 'dot' + (ageMin > 30 ? ' stale' : '');
-  live.innerHTML = `数据 <span class="mono">${ageMin} 分钟前</span> · 下次刷新 <span class="mono">${pad(Math.floor(left / 60))}:${pad(left % 60)}</span>`;
+  live.innerHTML = T.live(ageMin, `${pad(Math.floor(left / 60))}:${pad(left % 60)}`);
 }
 setInterval(tickLive, 1000);
 
@@ -287,7 +412,7 @@ function stackedTooltip(fmt, extra) {
   return { mode: 'index', intersect: false, filter: (i) => i.raw !== 0 && i.raw != null && !i.dataset.tipHide,
     itemSort: (a, b) => (a.dataset.type === 'line') - (b.dataset.type === 'line') || b.raw - a.raw,
     callbacks: { label: (i) => ` ${i.dataset.label}: ${fmt(i.raw)}`,
-      footer: (items) => { const bars = items.filter((i) => i.dataset.type !== 'line'); const out = bars.length > 1 ? ['合计 ' + fmt(sum(bars.map((i) => i.raw)))] : []; const e = extra && extra(items); if (e) out.push(e); return out; } } };
+      footer: (items) => { const bars = items.filter((i) => i.dataset.type !== 'line'); const out = bars.length > 1 ? [T.total(fmt(sum(bars.map((i) => i.raw))))] : []; const e = extra && extra(items); if (e) out.push(e); return out; } } };
 }
 const barStyle = (color) => ({ backgroundColor: color, borderColor: css('--panel'), borderWidth: { top: 1, bottom: 1, left: 0, right: 0 }, borderSkipped: false, barPercentage: 0.78, categoryPercentage: 0.86, order: 2 });
 const legendTop = { position: 'top', align: 'end', labels: { padding: 14 } };
@@ -315,14 +440,14 @@ function render() {
   const firstDate = P.dailyByModel[0]?.date;
   const dates = dateList(state.days, firstDate);
   const dateIdx = Object.fromEntries(dates.map((d, i) => [d, i]));
-  const rangeLabel = state.days === 1 ? '今日' : state.days ? `近 ${state.days} 天` : `全部（自 ${firstDate}）`;
-  const prevLabel = state.days === 1 ? '昨日' : state.days ? `上一个 ${state.days} 天` : '';
+  const rangeLabel = T.range(state.days, firstDate);
+  const prevLabel = T.prev(state.days);
 
-  $('#meta').textContent = `${meta.host || ''} · ${P.tz} · ${P.projects.length} 个项目 · ${int(P.totals.sessions)} 个会话 · ${int(P.totals.msgs)} 条请求 · ${tok(totalTokens)} tokens · 累计 ${money(P.totals.cost, 0)} · 数据生成于 ${fmtTime(P.generatedAt)}`;
+  $('#meta').textContent = T.meta({ host: meta.host || '', tz: P.tz, projects: P.projects.length, sessions: int(P.totals.sessions), msgs: int(P.totals.msgs), tokens: tok(totalTokens), cost: money(P.totals.cost, 0), gen: fmtTime(P.generatedAt) });
   tickLive();
-  $('#h-daily').textContent = rangeLabel + ' · 柱顶为当日费用与 token · 虚线为 7 日均线';
-  $('#h-rank').textContent = rangeLabel + ' · 灰条为请求数';
-  $('#h-proj').textContent = `${rangeLabel} 的费用 / Token / 请求；会话数与最近活动为全部历史`;
+  $('#h-daily').textContent = T.hDaily(rangeLabel);
+  $('#h-rank').textContent = T.hRank(rangeLabel);
+  $('#h-proj').textContent = T.hProj(rangeLabel);
 
   // ---- per-day aggregates
   const byDay = {};
@@ -330,7 +455,7 @@ function render() {
   const actByDay = Object.fromEntries((P.dailyActivity || []).map((a) => [a.date, a]));
   const agg = (list) => list.reduce((a, d) => { const x = byDay[d]; const y = actByDay[d]; if (x) { a.cost += x.cost; a.tokens += x.tokens; a.input += x.input; a.output += x.output; a.cacheCreate += x.cacheCreate; a.cacheRead += x.cacheRead; } if (y) { a.msgs += y.msgs; a.sessionDays += y.sessions; } return a; }, { cost: 0, tokens: 0, input: 0, output: 0, cacheCreate: 0, cacheRead: 0, msgs: 0, sessionDays: 0 });
 
-  // ---- KPIs（全部跟随所选区间，仅「累计费用」是全部历史）
+  // ---- KPIs (every card follows the selected range; all-time numbers are labelled as such)
   const R = agg(dates);
   const prev = state.days ? agg(dateList(state.days, null, state.days)) : { cost: 0, tokens: 0, msgs: 0 };
   const rangeDays = dates.filter((d) => byDay[d]).length || 1;
@@ -344,7 +469,7 @@ function render() {
   const TC = Object.fromEntries((P.taskCols || []).map((c, i) => [c, i]));
   const rangeTasks = (P.tasks || []).filter((t) => dateIdx[t[TC.date]] !== undefined);
   const med = (arr) => { if (!arr.length) return 0; const a = arr.slice().sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
-  // 只有一两轮、没动工具的闲聊会把中位数压成 0，复杂度只看「实质任务」
+  // Short chit-chat turns would drag every median to 0, so complexity only looks at "real tasks"
   const workTasks = rangeTasks.filter((t) => t[TC.tools] >= 1 || t[TC.turns] >= 3);
   const medTurns = med(workTasks.map((t) => t[TC.turns])), medTools = med(workTasks.map((t) => t[TC.tools]));
   const medTaskCost = med(workTasks.map((t) => t[TC.cost])), medSec = med(workTasks.map((t) => t[TC.sec] || 0));
@@ -356,14 +481,14 @@ function render() {
   const winsInRange = (blocks?.blocks || []).filter((b) => !b.isGap && b.totalTokens > 1e6 && dateIdx[ymd(new Date(b.startTime))] !== undefined);
   const cut = (n, len = 16) => n && n.length > len ? '…' + n.slice(-len + 1) : (n || '-');
   const kpis = [
-    { label: `费用 · ${rangeLabel}`, value: money(R.cost), sub: `${tok(R.tokens)} tokens · 日均 ${money(R.cost / rangeDays, 0)}`, foot: prevLabel ? `${delta(R.cost, prev.cost)} ${prevLabel} ${money(prev.cost, 0)}` : `${rangeDays} 个活跃日`, spark: spark(sparkDates.map((d) => byDay[d]?.cost || 0), accent) },
-    { label: '计费窗口', value: int(winsInRange.length), sub: `最高 ${tok(Math.max(...winsInRange.map((b) => b.totalTokens), 0))}`, foot: `${rangeLabel} · 合计 ${money(sum(winsInRange.map((b) => b.costUSD)), 0)}（含其他 agent）` },
-    { label: '单日峰值', value: money(peakDay.cost), sub: `${tok(peakDay.tokens)} tokens`, foot: `${rangeLabel} · ${peakDay.date}` },
-    { label: 'Token 用量', value: tok(R.tokens), sub: `输入+输出 ${tok(R.input + R.output)}`, foot: prevLabel ? `${delta(R.tokens, prev.tokens)} ${prevLabel} ${tok(prev.tokens)}` : rangeLabel },
-    { label: '请求数', value: int(R.msgs), sub: `均 ${tok(Math.round(R.tokens / (R.msgs || 1)))} tokens/次`, foot: `${delta(R.msgs, prev.msgs)} 均 ${money(R.cost / (R.msgs || 1))}/次` },
-    { label: '会话数', value: int(sessInRange), sub: `均 ${money(R.cost / (sessInRange || 1), 0)}/会话`, foot: `${rangeLabel} · 全部历史 ${int(P.totals.sessions)} 个` },
-    { label: '活跃项目', value: int(liveProjects.length), sub: `Top ${cut(topProj && projName[topProj[0]])}`, foot: `${rangeLabel} · 占 ${pct(topProj ? topProj[1] / (R.cost || 1) : 0, 0)}` },
-    { label: '任务复杂度', value: `${int(medTurns)}<small>轮 / 任务</small>`, sub: `中位 ${dur(medSec)} · ${int(medTools)} 次工具 · ${money(medTaskCost)}`, foot: `${rangeLabel} · ${int(workTasks.length)} 个实质任务 · 重任务 ${pct(heavyTasks / (rangeTasks.length || 1), 0)}`, tip: `以上都是中位数。任务段 = 一条用户提示到下一条之间的所有回合；实质任务 = 至少 1 次工具调用或 ≥3 轮（本区间 ${workTasks.length}/${rangeTasks.length}）；重任务 = 压缩过上下文 / ≥20 次工具 / 上下文 ≥500K，共 ${heavyTasks} 个；中位上下文 ${tok(medCtx)}` },
+    { label: T.kCost(rangeLabel), value: money(R.cost), sub: T.kCostSub(tok(R.tokens), money(R.cost / rangeDays, 0)), foot: prevLabel ? `${delta(R.cost, prev.cost)} ${prevLabel} ${money(prev.cost, 0)}` : T.kDaysActive(rangeDays), spark: spark(sparkDates.map((d) => byDay[d]?.cost || 0), accent) },
+    { label: T.kWin, value: int(winsInRange.length), sub: T.kWinSub(tok(Math.max(...winsInRange.map((b) => b.totalTokens), 0))), foot: T.kWinFoot(rangeLabel, money(sum(winsInRange.map((b) => b.costUSD)), 0)) },
+    { label: T.kPeak, value: money(peakDay.cost), sub: `${tok(peakDay.tokens)} tokens`, foot: `${rangeLabel} · ${peakDay.date}` },
+    { label: T.kTok, value: tok(R.tokens), sub: T.kTokSub(tok(R.input + R.output)), foot: prevLabel ? `${delta(R.tokens, prev.tokens)} ${prevLabel} ${tok(prev.tokens)}` : rangeLabel },
+    { label: T.kReq, value: int(R.msgs), sub: T.kReqSub(tok(Math.round(R.tokens / (R.msgs || 1)))), foot: T.kReqFoot(delta(R.msgs, prev.msgs), money(R.cost / (R.msgs || 1))) },
+    { label: T.kSess, value: int(sessInRange), sub: T.kSessSub(money(R.cost / (sessInRange || 1), 0)), foot: T.kSessFoot(rangeLabel, int(P.totals.sessions)) },
+    { label: T.kProj, value: int(liveProjects.length), sub: `Top ${cut(topProj && projName[topProj[0]])}`, foot: T.kProjFoot(rangeLabel, pct(topProj ? topProj[1] / (R.cost || 1) : 0, 0)) },
+    { label: T.kCx, value: T.kCxVal(int(medTurns)), sub: T.kCxSub(dur(medSec), int(medTools), money(medTaskCost)), foot: T.kCxFoot(rangeLabel, int(workTasks.length), pct(heavyTasks / (rangeTasks.length || 1), 0)), tip: T.kCxTip(workTasks.length, rangeTasks.length, heavyTasks, tok(medCtx)) },
   ];
   $('#kpis').innerHTML = kpis.map((k) => `<div class="kpi"${k.tip ? ` title="${esc(k.tip)}"` : ''}><div class="label">${k.label}</div><div class="row"><div class="value">${k.value}</div>${k.spark || ''}</div>${k.sub ? `<div class="sub">${k.sub}</div>` : ''}<div class="foot">${k.foot}</div></div>`).join('');
 
@@ -381,66 +506,66 @@ function render() {
   const maRange = dates.map((d) => maIdx[d] !== undefined ? maAll[maIdx[d]] : null);
   mk('c-daily-model', { type: 'bar', data: { labels: dates, datasets: [
       ...modelsInRange.map((m) => ({ label: shortModel(m), data: dm[m], ...barStyle(modelColor(m)) })),
-      { type: 'line', label: '7 日均线', data: maRange, stack: 'ma', borderColor: css('--ink-2'), borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, pointHitRadius: 0, tension: 0.3, order: 1, spanGaps: true },
+      { type: 'line', label: T.dsMA, data: maRange, stack: 'ma', borderColor: css('--ink-2'), borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, pointHitRadius: 0, tension: 0.3, order: 1, spanGaps: true },
     ] },
     options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { top: 14 } },
       scales: { x: xDate(dates), y: yNum((v) => '$' + v) },
       plugins: { legend: legendTop,
-        tooltip: stackedTooltip((v) => money(v), (items) => { const d = byDay[dates[items[0].dataIndex]]; return d ? `Token ${tok(d.tokens)} · 输入 ${tok(d.input)} · 输出 ${tok(d.output)} · 缓存写 ${tok(d.cacheCreate)} · 缓存读 ${tok(d.cacheRead)}` : ''; }) } },
+        tooltip: stackedTooltip((v) => money(v), (items) => { const d = byDay[dates[items[0].dataIndex]]; return d ? T.tokBreak(tok(d.tokens), tok(d.input), tok(d.output), tok(d.cacheCreate), tok(d.cacheRead)) : ''; }) } },
     plugins: [stackTopLabels((i) => { const d = byDay[dates[i]]; return d && dates.length <= 10 ? `${money(d.cost, d.cost < 10 ? 2 : 0)} · ${tok(d.tokens)}` : ''; })] });
 
   // ---- billing window history
   const wins = (blocks?.blocks || []).filter((b) => !b.isGap && (b.totalTokens > 1e6 || b.isActive)).slice(-12).reverse();
   const winCost = wins.map((b) => b.costUSD);
   const winLabel = (b) => { const d = new Date(b.startTime); return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`; };
-  $('#h-blocks').textContent = `近 ${wins.length} 个有用量的窗口 · 峰值 ${tok(Math.max(...wins.map((b) => b.totalTokens), 0))}`;
+  $('#h-blocks').textContent = T.hBlocks(wins.length, tok(Math.max(...wins.map((b) => b.totalTokens), 0)));
   mk('c-blocks', { type: 'bar', data: { labels: wins.map(winLabel), datasets: [{ data: wins.map((b) => b.totalTokens), backgroundColor: wins.map((b) => css(b.isActive ? '--s2' : '--s1')), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.72, categoryPercentage: 0.84 }] },
     options: { indexAxis: 'y', maintainAspectRatio: false, layout: { padding: { right: 56 } },
       scales: { x: { beginAtZero: true, grid: gridOpts(), border: { display: false }, ticks: { callback: (v) => tok(v), maxTicksLimit: 4 } },
         y: { grid: { display: false }, border: { display: false }, ticks: { color: css('--ink-2'), font: { family: '"JetBrains Mono", monospace', size: 11 } } } },
       plugins: { legend: { display: false }, tooltip: { callbacks: {
-        title: (items) => items[0].label + (wins[items[0].dataIndex].isActive ? ' 进行中' : ''),
-        label: (i) => [` ${tok(i.raw)} tokens · ${money(winCost[i.dataIndex])}`, ` ${int(wins[i.dataIndex].entries)} 次请求`, ` ${wins[i.dataIndex].models.map(shortModel).join(' / ')}`] } } } },
+        title: (items) => items[0].label + (wins[items[0].dataIndex].isActive ? T.active : ''),
+        label: (i) => [` ${tok(i.raw)} tokens · ${money(winCost[i.dataIndex])}`, ` ${T.nReq(int(wins[i.dataIndex].entries))}`, ` ${wins[i.dataIndex].models.map(shortModel).join(' / ')}`] } } } },
     plugins: [valueLabels((v, i) => money(winCost[i], 0), true)] });
 
   // ---- daily by project
   const dp = {};
   for (const r of P.dailyByProject) { const i = dateIdx[r.date]; if (i === undefined) continue; const key = projRank.indexOf(r.project) < 7 ? r.project : '__other'; (dp[key] = dp[key] || dates.map(() => 0))[i] += r.cost; }
   const projKeys = [...projRank.slice(0, 7).filter((k) => dp[k]), ...(dp.__other ? ['__other'] : [])];
-  mk('c-daily-project', { type: 'bar', data: { labels: dates, datasets: projKeys.map((k) => ({ label: k === '__other' ? '其他' : projName[k], data: dp[k], ...barStyle(k === '__other' ? css('--other') : projColor(k)) })) },
+  mk('c-daily-project', { type: 'bar', data: { labels: dates, datasets: projKeys.map((k) => ({ label: k === '__other' ? T.dsOther : projName[k], data: dp[k], ...barStyle(k === '__other' ? css('--other') : projColor(k)) })) },
     options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: xDate(dates), y: yNum((v) => '$' + v) }, plugins: { legend: legendTop, tooltip: stackedTooltip((v) => money(v)) } } });
 
   // ---- project rank
   const rank = Object.entries(projCostInRange).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]).slice(0, 12);
   mk('c-project-rank', { type: 'bar', data: { labels: rank.map(([id]) => { const n = projName[id]; return n.length > 26 ? '…' + n.slice(-25) : n; }), datasets: [
-      { label: '费用', data: rank.map(([, c]) => c), backgroundColor: rank.map(([id]) => projColor(id)), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.9, categoryPercentage: 0.74 },
-      { label: '请求数', data: rank.map(([id]) => projMsgInRange[id] || 0), xAxisID: 'x1', backgroundColor: css('--other'), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.62, categoryPercentage: 0.74 },
+      { label: T.dsCost, data: rank.map(([, c]) => c), backgroundColor: rank.map(([id]) => projColor(id)), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.9, categoryPercentage: 0.74 },
+      { label: T.lRequests, data: rank.map(([id]) => projMsgInRange[id] || 0), xAxisID: 'x1', backgroundColor: css('--other'), borderRadius: 3, borderSkipped: 'start', barPercentage: 0.62, categoryPercentage: 0.74 },
     ] },
     options: { indexAxis: 'y', maintainAspectRatio: false, layout: { padding: { right: 60 } },
       scales: { x: { beginAtZero: true, grid: gridOpts(), border: { display: false }, ticks: { callback: (v) => '$' + v, maxTicksLimit: 5 } },
         x1: { position: 'top', beginAtZero: true, grid: { display: false }, border: { display: false }, ticks: { callback: (v) => Number.isInteger(v) ? int(v) : '', maxTicksLimit: 5, color: css('--other') } },
         y: { grid: { display: false }, border: { display: false }, ticks: { color: css('--ink-2'), font: { family: 'Inter, sans-serif', size: 11.5 } } } },
-      plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => projName[rank[items[0].dataIndex][0]], label: (i) => i.datasetIndex ? ` ${int(i.raw)} 次请求` : ' ' + money(i.raw) } } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => projName[rank[items[0].dataIndex][0]], label: (i) => i.datasetIndex ? ` ${T.nReq(int(i.raw))}` : ' ' + money(i.raw) } } } },
     plugins: [valueLabels((v) => money(v, 0), true)] });
 
   // ---- activity
   const sess = dates.map((d) => actByDay[d]?.sessions || 0), msgs = dates.map((d) => actByDay[d]?.msgs || 0);
   const miniOpts = (fmt) => ({ maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: xDate(dates), y: { beginAtZero: true, grid: gridOpts(), border: { display: false }, ticks: { maxTicksLimit: 3, padding: 6, callback: fmt } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (i) => ` ${i.dataset.label}: ${fmt(i.raw)}` } } } });
-  mk('c-sessions', { type: 'bar', data: { labels: dates, datasets: [{ label: '会话数', data: sess, backgroundColor: css('--s3'), borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.86 }] }, options: miniOpts((v) => v) });
-  mk('c-msgs', { type: 'bar', data: { labels: dates, datasets: [{ label: '请求数', data: msgs, backgroundColor: css('--s7'), borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.86 }] }, options: miniOpts((v) => int(v)) });
+  mk('c-sessions', { type: 'bar', data: { labels: dates, datasets: [{ label: T.lSessions, data: sess, backgroundColor: css('--s3'), borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.86 }] }, options: miniOpts((v) => v) });
+  mk('c-msgs', { type: 'bar', data: { labels: dates, datasets: [{ label: T.lRequests, data: msgs, backgroundColor: css('--s7'), borderRadius: 2, barPercentage: 0.7, categoryPercentage: 0.86 }] }, options: miniOpts((v) => int(v)) });
 
   // ---- heatmap
-  const order = [1, 2, 3, 4, 5, 6, 0], dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+  const order = [1, 2, 3, 4, 5, 6, 0], dayNames = T.week;
   const flat = P.heatmap.flat().map((c) => c.cost).filter((v) => v > 0).sort((a, b) => a - b);
   const steps = ['--seq-1', '--seq-2', '--seq-3', '--seq-4', '--seq-5', '--seq-6', '--seq-7'];
   const q = (p) => flat.length ? flat[Math.min(flat.length - 1, Math.floor(p * flat.length))] : 0;
   const thresholds = [0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map(q);
   const colorFor = (v) => { if (v <= 0) return null; let i = 0; while (i < thresholds.length && v > thresholds[i]) i++; return css(steps[i]); };
   let h = '<div></div>' + Array.from({ length: 24 }, (_, i) => `<div class="hh mono">${i % 3 === 0 ? pad(i) : ''}</div>`).join('');
-  for (const d of order) { h += `<div class="lab">周${dayNames[d]}</div>`; for (let hr = 0; hr < 24; hr++) { const c = P.heatmap[d][hr]; const bg = colorFor(c.cost); h += `<div class="cell" ${bg ? `style="background:${bg}"` : ''} title="周${dayNames[d]} ${pad(hr)}:00–${pad(hr + 1)}:00  ${money(c.cost)} · ${c.msgs} 次请求"></div>`; } }
+  for (const d of order) { h += `<div class="lab">${dayNames[d]}</div>`; for (let hr = 0; hr < 24; hr++) { const c = P.heatmap[d][hr]; const bg = colorFor(c.cost); h += `<div class="cell" ${bg ? `style="background:${bg}"` : ''} title="${dayNames[d]} ${pad(hr)}:00–${pad(hr + 1)}:00  ${money(c.cost)} · ${T.nReq(c.msgs)}"></div>`; } }
   $('#heat').innerHTML = h;
   const peak = (() => { let best = { v: -1, d: 0, hr: 0 }; P.heatmap.forEach((row, d) => row.forEach((c, hr) => { if (c.cost > best.v) best = { v: c.cost, d, hr }; })); return best; })();
-  $('#heat-legend').innerHTML = `<span>低</span>${steps.map((s) => `<i style="background:${css(s)}"></i>`).join('')}<span>高</span><span style="margin-left:auto">峰值 周${dayNames[peak.d]} ${pad(peak.hr)}:00 · ${money(peak.v, 0)}</span>`;
+  $('#heat-legend').innerHTML = `<span>${T.low}</span>${steps.map((s) => `<i style="background:${css(s)}"></i>`).join('')}<span>${T.high}</span><span style="margin-left:auto">${T.peakAt(dayNames[peak.d], pad(peak.hr), money(peak.v, 0))}</span>`;
 
   // ---- 5h block
   const act = blocks?.blocks?.find((b) => b.isActive);
@@ -449,14 +574,14 @@ function render() {
     const prog = Math.min(100, (Date.now() - new Date(act.startTime)) / (new Date(act.endTime) - new Date(act.startTime)) * 100);
     $('#block').innerHTML = `
       <div class="blk">
-        <div class="kpi"><div class="label">本窗口已用</div><div class="value">${money(act.costUSD)}</div><div class="foot">${tok(act.totalTokens)} tokens · ${int(act.entries)} 次请求</div></div>
-        <div class="kpi"><div class="label">燃烧速率</div><div class="value">${money(act.burnRate?.costPerHour || 0)}<small>/h</small></div><div class="foot">${tok((act.burnRate?.tokensPerMinute || 0) * 60)} tokens/h</div></div>
-        <div class="kpi"><div class="label">窗口结束预计</div><div class="value">${money(act.projection?.totalCost || act.costUSD)}</div><div class="foot">剩余 ${act.projection?.remainingMinutes ?? '-'} 分钟</div></div>
+        <div class="kpi"><div class="label">${T.bUsed}</div><div class="value">${money(act.costUSD)}</div><div class="foot">${tok(act.totalTokens)} tokens · ${T.nReq(int(act.entries))}</div></div>
+        <div class="kpi"><div class="label">${T.bBurn}</div><div class="value">${money(act.burnRate?.costPerHour || 0)}<small>/h</small></div><div class="foot">${tok((act.burnRate?.tokensPerMinute || 0) * 60)} tokens/h</div></div>
+        <div class="kpi"><div class="label">${T.bProj}</div><div class="value">${money(act.projection?.totalCost || act.costUSD)}</div><div class="foot">${T.bRemain(act.projection?.remainingMinutes ?? '-')}</div></div>
       </div>
       <div class="track"><div class="fill" style="width:${prog.toFixed(1)}%"></div></div>
       <div class="status" style="margin-top:8px;display:flex;justify-content:space-between"><span class="mono">${hm(act.startTime)} → ${hm(act.endTime)}</span><span>${act.models.map((m) => `<span class="badge">${shortModel(m)}</span>`).join(' ')}</span></div>`;
   } else {
-    $('#block').innerHTML = '<div class="status" style="padding:14px 0">当前没有活跃的计费窗口（最近 5 小时内无请求）。</div>';
+    $('#block').innerHTML = `<div class="status" style="padding:14px 0">${T.bNone}</div>`;
   }
 
   // ---- project table
@@ -466,12 +591,12 @@ function render() {
   const rows = P.projects.filter((p) => (projCostInRange[p.id] || 0) > 0).sort((a, b) => (projCostInRange[b.id] || 0) - (projCostInRange[a.id] || 0));
   const rangeTotal = sum(rows.map((p) => projCostInRange[p.id])) || 1;
   const maxCost = rows[0] ? projCostInRange[rows[0].id] : 1;
-  $('#t-projects').innerHTML = `<thead><tr><th></th><th>项目</th><th class="num">费用</th><th>占比</th><th>近 14 天</th><th class="num">Tokens</th><th class="num">请求</th><th class="num">会话</th><th class="num">$/会话</th><th>主模型</th><th>最近活动</th></tr></thead><tbody>` +
+  $('#t-projects').innerHTML = `<thead><tr><th></th><th>${T.thProj[0]}</th><th class="num">${T.thProj[1]}</th><th>${T.thProj[2]}</th><th>${T.thProj[3]}</th><th class="num">${T.thProj[4]}</th><th class="num">${T.thProj[5]}</th><th class="num">${T.thProj[6]}</th><th class="num">${T.thProj[7]}</th><th>${T.thProj[8]}</th><th>${T.thProj[9]}</th></tr></thead><tbody>` +
     rows.map((p, i) => { const c = projCostInRange[p.id]; const topModel = Object.entries(p.models).sort((a, b) => b[1] - a[1])[0]?.[0]; return `<tr><td class="rank num">${i + 1}</td><td class="name" title="${esc(p.cwd || p.id)}"><span class="sw" style="background:${projColor(p.id)}"></span>${esc(p.name)}</td><td class="num">${money(c)}</td><td><span class="share"><span class="track"><span class="fill" style="width:${(c / maxCost * 100).toFixed(1)}%;background:${projColor(p.id)}"></span></span><span class="num dim">${pct(c / rangeTotal)}</span></span></td><td>${tspark(projSpark[p.id] || last14dates.map(() => 0), projColor(p.id))}</td><td class="num">${tok(projTokInRange[p.id])}</td><td class="num">${int(projMsgInRange[p.id])}</td><td class="num">${int(p.sessions)}</td><td class="num dim">${money(p.cost / (p.sessions || 1), 0)}</td><td>${topModel ? `<span class="badge">${shortModel(topModel)}</span>` : '-'}</td><td class="dim" title="${fmtTime(p.last)}">${rel(p.last)}</td></tr>`; }).join('') +
-    `</tbody><tfoot><tr><th></th><th>${rows.length} 个项目</th><th class="num">${money(rangeTotal)}</th><th></th><th></th><th class="num">${tok(sum(Object.values(projTokInRange)))}</th><th class="num">${int(sum(Object.values(projMsgInRange)))}</th><th class="num">${int(sum(rows.map((p) => p.sessions)))}</th><th></th><th></th><th></th></tr></tfoot>`;
+    `</tbody><tfoot><tr><th></th><th>${T.tfProj(rows.length)}</th><th class="num">${money(rangeTotal)}</th><th></th><th></th><th class="num">${tok(sum(Object.values(projTokInRange)))}</th><th class="num">${int(sum(Object.values(projMsgInRange)))}</th><th class="num">${int(sum(rows.map((p) => p.sessions)))}</th><th></th><th></th><th></th></tr></tfoot>`;
 
   // ---- sessions table
-  $('#t-sessions').innerHTML = `<thead><tr><th>最近活动</th><th>项目</th><th>会话</th><th class="num">时长</th><th class="num">请求</th><th class="num">Tokens</th><th class="num">费用</th><th class="num">$/次</th><th>模型</th></tr></thead><tbody>` +
+  $('#t-sessions').innerHTML = `<thead><tr><th>${T.thSess[0]}</th><th>${T.thSess[1]}</th><th>${T.thSess[2]}</th><th class="num">${T.thSess[3]}</th><th class="num">${T.thSess[4]}</th><th class="num">${T.thSess[5]}</th><th class="num">${T.thSess[6]}</th><th class="num">${T.thSess[7]}</th><th>${T.thSess[8]}</th></tr></thead><tbody>` +
     P.sessions.slice(0, 30).map((s) => { const mins = Math.max(0, Math.round((new Date(s.last) - new Date(s.first)) / 60000)); const dur = mins >= 60 ? `${Math.floor(mins / 60)}h${pad(mins % 60)}m` : `${mins}m`; return `<tr><td class="dim" title="${fmtTime(s.last)}">${rel(s.last)}</td><td class="name"><span class="sw" style="background:${projColor(s.project)}"></span>${esc(s.projectName)}</td><td class="mono dim">${s.id.slice(0, 8)}</td><td class="num">${dur}</td><td class="num">${int(s.msgs)}</td><td class="num">${tok(s.tokens)}</td><td class="num">${money(s.cost)}</td><td class="num dim">${money(s.cost / (s.msgs || 1))}</td><td>${s.models.map((m) => `<span class="badge">${shortModel(m)}</span>`).join(' ')}</td></tr>`; }).join('') + '</tbody>';
 
   // ---- footer
@@ -479,9 +604,9 @@ function render() {
   const ccAgents = [...new Set((ccDaily?.daily || []).flatMap((d) => d.metadata?.agents || []))];
   const others = ccAgents.filter((a) => a !== 'claude');
   $('#foot').innerHTML = `
-    <div>数据来源：<code>bin/aggregate.mjs</code> 扫描 <code>~/.claude/projects/**/*.jsonl</code>，按 项目 × 日期 × 模型 聚合；定价取 LiteLLM 公开价格表（${P.pricingFetchedAt ? '更新于 ' + fmtTime(P.pricingFetchedAt) : '缓存'}），5 分钟 / 1 小时缓存写入分别计价。计费窗口来自 ccusage ${esc(meta.ccusageVersion || '')}。</div>
-    <div>对账：ccusage 累计 ${ccTotal != null ? money(ccTotal, 0) : '-'}（含 ${ccAgents.join(' + ') || '-'}），本页 Claude Code 累计 ${money(P.totals.cost, 0)}${ccTotal != null ? `，差额 ${money(ccTotal - P.totals.cost, 0)}${others.length ? ` 为 ${others.join(' / ')} 的用量` : ''}` : ''}。${P.unknownModels?.length ? `<span class="status err">未找到定价的模型：${P.unknownModels.join(', ')}</span>` : ''}</div>
-    <div>刷新：cron 每 5 分钟执行 <code>bin/refresh.sh</code>（上次耗时 ${meta.durationSec ?? '-'} 秒，${meta.ok ? '正常' : '<span class="status err">有错误，见 logs/refresh.log</span>'}），页面每 2 分钟自动重新拉取。费用为按公开 API 价格的估算，订阅套餐不按此付费。</div>`;
+    <div>${T.foot1(P.pricingFetchedAt ? T.priceAt(fmtTime(P.pricingFetchedAt)) : T.priceCached, esc(meta.ccusageVersion || ''))}</div>
+    <div>${T.foot2(ccTotal != null ? money(ccTotal, 0) : '-', ccAgents.join(' + ') || '-', money(P.totals.cost, 0), ccTotal != null ? money(ccTotal - P.totals.cost, 0) : '', others.join(' / '), P.unknownModels?.length ? P.unknownModels.join(', ') : '')}</div>
+    <div>${T.foot3(meta.durationSec ?? '-', meta.ok)}</div>`;
 }
 
 load();

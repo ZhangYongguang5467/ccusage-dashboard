@@ -85,7 +85,7 @@ const heat = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({
 const sessions = new Map(); // sid -> {...}
 const dailyActivity = new Map(); // date -> {sessions:Set, msgs, output}
 const seen = new Set();
-const tasks = []; // 任务段：一条用户提示到下一条之间的所有助手回合
+const tasks = []; // one entry per task: a user prompt and every assistant turn before the next one
 const unknownModels = new Set();
 let totals = { cost: 0, input: 0, output: 0, cacheCreate: 0, cacheRead: 0, msgs: 0, files: 0, lines: 0 };
 
@@ -93,7 +93,7 @@ async function processFile(pricing, pid, file) {
   const sid = path.basename(file, '.jsonl');
   const rl = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity });
   const cwdCount = new Map();
-  // 任务段：用户提示开启，下一条用户提示或文件结束时收尾
+  // A task opens on a user prompt and closes on the next one (or at end of file)
   let task = null;
   const closeTask = () => { if (task && task.m > 0) tasks.push([task.d, pid, task.m, task.t, task.f.size, task.c, task.k, task.e, task.x, +task.cost.toFixed(3), task.tok, task.end ? Math.round((task.end - task.t0) / 1000) : 0]); task = null; };
   for await (const line of rl) {
@@ -166,7 +166,7 @@ async function processFile(pricing, pid, file) {
 
     totals.cost += cost; totals.input += inp; totals.output += out; totals.cacheCreate += cc; totals.cacheRead += cr; totals.msgs++;
 
-    // 任务段累计
+    // task-level counters
     if (task) {
       task.m++; task.cost += cost; task.tok += tokens;
       if (ts.getTime() > task.end) task.end = ts.getTime();
