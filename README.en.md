@@ -2,124 +2,73 @@
 
 English · [简体中文](README.md)
 
-A self-hosted dashboard for your local Claude Code usage: tokens and estimated cost broken down by day, project, model and task. Bilingual UI (English / 简体中文), follows your system light/dark theme.
-
-Static page + a cron job that regenerates JSON; nginx only serves files. No backend process, no build step.
+A local dashboard for Claude Code usage: tokens and estimated cost by day, project, model and task. One static page plus a cron job — no backend process.
 
 ![screenshot](docs/screenshot-en.png)
 
-> The screenshot uses anonymized demo data.
+<sub>Screenshot uses anonymized demo data</sub>
 
-```
-.
-├── bin/aggregate.mjs    # scans ~/.claude/projects/**/*.jsonl, aggregates by project×date×model + task segmentation
-├── bin/refresh.sh       # cron every 5 min: ccusage JSON + aggregate.mjs -> www/data/
-├── bin/dash             # single entry point: install / start / stop / status / refresh / uninstall
-├── bin/install-nginx.sh # renders and enables the nginx site (called by bin/dash)
-├── bin/uninstall-nginx.sh # disables the site
-├── nginx/*.template     # site template, __ROOT__ / __PORT__ filled in at install time
-├── www/index.html       # the whole page (Chart.js, no build)
-└── www/data/*.json      # generated data, never committed
-```
+## Features
 
-## Requirements
+- 8 KPIs (cost, tokens, requests, sessions, billing windows, task complexity, …), all driven by the `1D / 7D / 30D / 90D / ALL` picker
+- Daily cost by model, project ranking, billing-window history, activity heatmap, project and session tables
+- Task-level analysis: transcripts are split into tasks per user prompt, with turns, tool calls, context size and duration
+- English / 中文 and light / dark, switchable in one click
+- Reads local files only; nothing is uploaded
 
-- Node.js >= 18 (uses global `fetch`)
-- nginx, or any tool that can serve a static directory
-- cron (optional, for the 5-minute auto refresh)
-- Claude Code transcripts on this machine: `~/.claude/projects/**/*.jsonl`
+## Quick start
 
-## Privacy
-
-Everything is read locally and no usage data is uploaded. The only outbound request is the public LiteLLM price table, fetched once every 24h from `raw.githubusercontent.com`, falling back to the local cache if it fails; `ccusage` also has an `--offline` fallback.
-
-## Install
+Requires Node.js ≥ 18, nginx, cron, and Claude Code transcripts on this machine (`~/.claude/projects`).
 
 ```bash
 git clone https://github.com/ZhangYongguang5467/ccusage-dashboard.git
 cd ccusage-dashboard
-bin/dash install
+bin/dash install      # deps + data + cron + nginx site; sudo is used only for nginx
 ```
 
-One command does all four steps: install deps, generate the data once, schedule the 5-minute cron job, and enable the nginx site (the only step that calls sudo). Then open <http://localhost:8090/>.
+Open <http://localhost:8090/>. Another port: `PORT=8091 bin/dash install`.
 
-Another port: `PORT=8091 bin/dash install`
+On a remote machine, use an SSH tunnel (`ssh -L 8090:localhost:8090 <host>`). The page shows project paths and cost — don't expose the port.
 
-## Start / stop
+## Commands
 
-```bash
-bin/dash status      # site, cron, data freshness
-bin/dash stop        # disable site + cron, keep the data
-bin/dash start       # enable again
-bin/dash refresh     # regenerate the data now
-bin/dash uninstall   # stop, then delete data / logs / node_modules (repo untouched)
+| Command | What it does |
+|---|---|
+| `bin/dash status` | Site, cron and data freshness |
+| `bin/dash stop` / `start` / `restart` | Disable / enable the site and cron; data is kept |
+| `bin/dash refresh` | Regenerate the data now |
+| `bin/dash uninstall` | Stop and delete data / logs / node_modules |
+
+## How it works
+
+Every 5 minutes cron runs `bin/refresh.sh`: ccusage exports its JSON, then `bin/aggregate.mjs` scans `~/.claude/projects/**/*.jsonl` and writes `www/data/*.json`. nginx serves `www/` as-is; the page renders with Chart.js and re-fetches every 2 minutes.
+
+```
+bin/dash              entry point: install / start / stop / status / refresh / uninstall
+bin/refresh.sh        the cron job
+bin/aggregate.mjs     aggregation + task segmentation
+nginx/*.template      site template, rendered with the repo path at install time
+www/index.html        the page — single file, no build step
+www/data/             generated data, gitignored
 ```
 
-No absolute paths are baked in: the script renders `nginx/ccusage-dashboard.conf` (gitignored) from the repo's real location, and both `refresh.sh` and `aggregate.mjs` resolve paths from the script location.
+## Metrics
 
-For remote access use an SSH tunnel rather than opening a firewall port — the page shows project paths and cost:
+- **Cost**: tokens × public LiteLLM prices; input, output, cache write (5m / 1h) and cache read priced separately. Estimates only — subscription plans are not billed this way
+- **Dedup**: same as ccusage (`message.id + requestId`); `<synthetic>` is skipped
+- **Tasks**: one user prompt through every turn before the next. A *real task* has ≥1 tool call or ≥3 turns; a *heavy task* compacted its context, made ≥20 tool calls, or reached ≥500K context
+- **Billing windows**: from ccusage blocks, which include other agents on the machine (codex, kimi, …), so their total exceeds the Claude Code cost shown here
+- Days follow the local timezone; the footer reconciles against ccusage
 
-```bash
-gcloud compute ssh <instance> --zone <zone> -- -N -L 8090:localhost:8090
-```
+## Configuration
 
-<details>
-<summary>Manual setup, without bin/dash</summary>
+- Port: `PORT=8091 bin/dash install`
+- Project aliases: `www/data/aliases.json` (gitignored), e.g. `{ "-home-me-work-repo": "nicer name" }`; the key is the cwd with `/` replaced by `-`
+- URL params: `?lang=en|zh`, `?theme=dark|light`
 
-```bash
-npm i
-bin/refresh.sh
-( crontab -l 2>/dev/null; echo "*/5 * * * * $PWD/bin/refresh.sh >/dev/null 2>&1" ) | crontab -
-sudo PORT=8090 bin/install-nginx.sh     # to disable: sudo bin/uninstall-nginx.sh
-```
+## Privacy
 
-</details>
-
-## What's on the page
-
-- **KPI cards** — all follow the `1D / 7D / 30D / 90D / ALL` range picker: cost, billing windows, busiest day, tokens, requests, sessions, active projects, task complexity
-- **Daily cost · by model** — stacked bars + 7-day average, each bar labelled with that day's cost and tokens
-- **Project cost & requests** — two series, requests read off the top axis
-- **Daily cost by project** / **Billing window history** (last 12 five-hour windows)
-- **Daily activity** / **Activity heatmap** (weekday × hour)
-- **Current 5-hour billing window** — from ccusage blocks, to compare against Max/Pro limits
-- **Projects** / **Recent sessions** tables
-
-Three buttons top right: `文 / EN` switches language, `◐` switches theme, `↻` re-fetches. Both choices persist in localStorage; `?lang=en` and `?theme=dark` also work.
-
-## How the numbers are computed
-
-- Cost = tokens × public LiteLLM prices (input / output / 5m cache write / 1h cache write / cache read priced separately). The price table is fetched every 24h into `www/data/pricing.json`. **These are estimates — subscription plans are not billed this way.**
-- Deduplication matches ccusage (`message.id + requestId`), `<synthetic>` is skipped.
-- Days are cut in your local timezone.
-- **Tasks**: one user prompt through every turn before the next one. Each task records turns, tool calls, files touched, peak context, context compactions, tool errors, xhigh turns, duration, cost and tokens.
-  - A *real task* has at least 1 tool call or ≥3 turns — short chit-chat would otherwise drag every median to 0.
-  - A *heavy task* compacted its context, made ≥20 tool calls, or reached ≥500K context.
-- Billing windows come from ccusage blocks, which **include other agents on the machine** (codex / kimi …), so the window total is larger than the Claude Code cost on this page.
-- The footer reconciles this page against ccusage.
-
-## Project display names
-
-To give a project a nicer label, drop it in `www/data/aliases.json` (gitignored, so it never reaches the repo):
-
-```json
-{ "-home-me-work-some-repo": "nicer name" }
-```
-
-The key is the project id — the cwd with `/` replaced by `-`.
-
-## Operating it
-
-```bash
-node bin/aggregate.mjs         # re-aggregate only (skips ccusage, ~5s)
-tail logs/refresh.log
-crontab -l | grep ccusage-dashboard   # */5 * * * *
-npm i ccusage@20               # upgrade ccusage (stay on 20.x)
-```
-
-## Note
-
-`www/data/` is gitignored: it contains absolute project paths, task-level detail and your hostname. Don't commit generated data.
+Only local files are read and no usage data leaves the machine. The single outbound request fetches the LiteLLM price table once every 24h, falling back to the cache. `www/data/` contains project paths and the hostname; it is gitignored — don't commit it.
 
 ## License
 
