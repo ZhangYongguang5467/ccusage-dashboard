@@ -36,7 +36,9 @@ port_free() { node -e 'const s=require("net").createServer();s.once("error",()=>
 # Skipped when the port is ours (our server / our nginx site already up).
 check_port() {
   if [ "$MODE" = node ]; then node_pid >/dev/null && return; else [ -e "$SITE" ] && return; fi
-  port_free "$PORT" || die "port $PORT is already in use — another process, or an SSH tunnel to a remote dashboard? Try: PORT=8091 bin/dash $1"
+  # a just-reloaded nginx keeps the socket for a moment; give it a few seconds before giving up
+  local i; for i in 1 2 3 4 5; do port_free "$PORT" && return; sleep 1; done
+  die "port $PORT is already in use — another process, or an SSH tunnel to a remote dashboard? Try: PORT=8091 bin/dash $1"
 }
 node_start() {
   if node_pid >/dev/null; then say "built-in server already running (pid $(node_pid))"; return; fi
