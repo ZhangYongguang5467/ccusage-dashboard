@@ -1,5 +1,5 @@
-# Rendered by bin/install-nginx.sh -> nginx/ccusage-dashboard.conf (gitignored).
-# __ROOT__ is replaced with the repo path, __PORT__ with the listen port.
+# Template. bin/install-nginx.sh fills in the repo path and the listen port,
+# writing nginx/ccusage-dashboard.conf (gitignored). Do not edit the rendered file.
 server {
     listen __PORT__;
     listen [::]:__PORT__;
