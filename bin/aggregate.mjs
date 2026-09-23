@@ -84,18 +84,19 @@ const models = new Map(); // model -> {cost,tokens,...}
 const heat = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => ({ cost: 0, msgs: 0 })));
 const sessions = new Map(); // sid -> {...}
 const dailyActivity = new Map(); // date -> {sessions:Set, msgs, output}
-const seen = new Set();
-const tasks = []; // one entry per task: a user prompt and every assistant turn before the next one
+const entries = new Map(); // `${message.id}:${requestId}` -> one API response
+const toolIds = new Set();
+const taskList = []; // one per task: a user prompt and every assistant turn before the next one
+let tasks = [];
 const unknownModels = new Set();
 let totals = { cost: 0, input: 0, output: 0, cacheCreate: 0, cacheRead: 0, msgs: 0, files: 0, lines: 0 };
 
-async function processFile(pricing, pid, file) {
-  const sid = path.basename(file, '.jsonl');
+// Pass 1: collect API responses. One response is logged as several lines (one per content block) sharing the same
+// id; the usage on the earlier lines is a streaming snapshot, so keep the copy with the most output tokens.
+async function readFile(pid, file, sid) {
   const rl = readline.createInterface({ input: fs.createReadStream(file), crlfDelay: Infinity });
-  const cwdCount = new Map();
   // A task opens on a user prompt and closes on the next one (or at end of file)
   let task = null;
-  const closeTask = () => { if (task && task.m > 0) tasks.push([task.d, pid, task.m, task.t, task.f.size, task.c, task.k, task.e, task.x, +task.cost.toFixed(3), task.tok, task.end ? Math.round((task.end - task.t0) / 1000) : 0]); task = null; };
   for await (const line of rl) {
     if (!line) continue;
     totals.lines++;
@@ -111,27 +112,41 @@ async function processFile(pricing, pid, file) {
       if (!(typeof uc === 'string' || (Array.isArray(uc) && uc.some((b) => b?.type === 'text')))) continue;
       const uts = new Date(ou.timestamp || 0);
       if (isNaN(uts)) continue;
-      closeTask();
-      task = { d: localDate(uts), m: 0, t: 0, f: new Set(), c: 0, k: 0, e: 0, x: 0, cost: 0, tok: 0, t0: uts.getTime(), end: 0 };
+      task = { pid, d: localDate(uts), m: 0, t: 0, f: new Set(), c: 0, k: 0, e: 0, x: 0, cost: 0, tok: 0, t0: uts.getTime(), end: 0 };
+      taskList.push(task);
       continue;
     }
     let o; try { o = JSON.parse(line); } catch { continue; }
     const m = o.message; if (!m || !m.usage) continue;
     const model = m.model; if (!model || model === '<synthetic>') continue;
-    if (m.id && o.requestId) { const key = m.id + ':' + o.requestId; if (seen.has(key)) continue; seen.add(key); }
-    const u = m.usage;
+    const ts = new Date(o.timestamp || 0);
+    if (isNaN(ts)) continue;
+    // each line carries its own blocks, so tools are counted per line, once per tool_use id (resumed sessions repeat them)
+    if (task && Array.isArray(m.content)) for (const b of m.content) {
+      if (!b || b.type !== 'tool_use' || (b.id && toolIds.has(b.id))) continue;
+      if (b.id) toolIds.add(b.id);
+      task.t++; const fp = b.input?.file_path || b.input?.notebook_path; if (fp) task.f.add(fp);
+    }
+    const key = m.id && o.requestId ? m.id + ':' + o.requestId : entries.size + ':' + file;
+    const prev = entries.get(key);
+    if (!prev) entries.set(key, { pid, sid, ts, model, u: m.usage, costUSD: o.costUSD, cwd: o.cwd, task, xhigh: o.effort === 'xhigh' || o.perTurnEffort === 'xhigh' });
+    else if ((m.usage.output_tokens || 0) > (prev.u.output_tokens || 0)) { prev.u = m.usage; if (o.costUSD != null) prev.costUSD = o.costUSD; }
+  }
+  totals.files++;
+}
+
+// Pass 2: price each response once and add it to every view
+function tally(pricing) {
+  for (const { pid, sid, ts, model, u, costUSD, cwd, task, xhigh } of entries.values()) {
     const inp = u.input_tokens || 0, out = u.output_tokens || 0;
     const cc = u.cache_creation_input_tokens || 0, cr = u.cache_read_input_tokens || 0;
     const cc1h = u.cache_creation?.ephemeral_1h_input_tokens || 0;
     const price = findPrice(pricing, model);
     if (!price.found) unknownModels.add(model);
-    const cost = (o.costUSD != null) ? o.costUSD :
+    const cost = (costUSD != null) ? costUSD :
       inp * price.input + out * price.output + (cc - cc1h) * price.cacheCreate + cc1h * price.cacheCreate1h + cr * price.cacheRead;
-    const ts = new Date(o.timestamp || 0);
-    if (isNaN(ts)) continue;
     const date = localDate(ts);
     const tokens = inp + out + cc + cr;
-    if (o.cwd) cwdCount.set(o.cwd, (cwdCount.get(o.cwd) || 0) + 1);
 
     // project
     let P = projects.get(pid);
@@ -141,7 +156,7 @@ async function processFile(pricing, pid, file) {
     if (date < P.first) P.first = date;
     if (ts.toISOString() > P.last) P.last = ts.toISOString();
     add(P.models, model, cost);
-    if (o.cwd) P._cwd.set(o.cwd, (P._cwd.get(o.cwd) || 0) + 1);
+    if (cwd) P._cwd.set(cwd, (P._cwd.get(cwd) || 0) + 1);
 
     // daily by project
     const k1 = date + '|' + pid; const d1 = dailyByProject.get(k1) || { date, project: pid, cost: 0, tokens: 0, msgs: 0 };
@@ -171,14 +186,27 @@ async function processFile(pricing, pid, file) {
       task.m++; task.cost += cost; task.tok += tokens;
       if (ts.getTime() > task.end) task.end = ts.getTime();
       const ctx = inp + cc + cr; if (ctx > task.c) task.c = ctx;
-      if (o.effort === 'xhigh' || o.perTurnEffort === 'xhigh') task.x++;
-      if (Array.isArray(m.content)) for (const b of m.content) {
-        if (b && b.type === 'tool_use') { task.t++; const fp = b.input?.file_path || b.input?.notebook_path; if (fp) task.f.add(fp); }
-      }
+      if (xhigh) task.x++;
     }
   }
-  closeTask();
-  totals.files++;
+  tasks = taskList.filter((t) => t.m > 0).map((t) => [t.d, t.pid, t.m, t.t, t.f.size, t.c, t.k, t.e, t.x, +t.cost.toFixed(3), t.tok, t.end ? Math.round((t.end - t.t0) / 1000) : 0]);
+}
+
+// Transcripts in a project dir as [file, sessionId]; subagent logs live under <sid>/subagents/ (workflow agents
+// one level deeper, in workflows/<run>/) and count toward their parent session
+function listFiles(pdir) {
+  const out = [];
+  const walk = (dir, sid) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (e.isFile() && e.name.endsWith('.jsonl')) out.push([path.join(dir, e.name), sid]);
+      else if (e.isDirectory()) walk(path.join(dir, e.name), sid);
+    }
+  };
+  for (const e of fs.readdirSync(pdir, { withFileTypes: true })) {
+    if (e.isFile() && e.name.endsWith('.jsonl')) out.push([path.join(pdir, e.name), path.basename(e.name, '.jsonl')]);
+    else if (e.isDirectory() && fs.existsSync(path.join(pdir, e.name, 'subagents'))) walk(path.join(pdir, e.name, 'subagents'), e.name);
+  }
+  return out;
 }
 
 // Model ids used in recent logs (last 2 days), read cheaply from the file tails
@@ -187,9 +215,8 @@ function preScanModels() {
   for (const root of ROOTS) for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
     if (!dir.isDirectory()) continue;
     const pdir = path.join(root, dir.name);
-    for (const f of fs.readdirSync(pdir)) {
-      if (!f.endsWith('.jsonl')) continue;
-      const fp = path.join(pdir, f), st = fs.statSync(fp);
+    for (const [fp] of listFiles(pdir)) {
+      const st = fs.statSync(fp);
       if (st.mtimeMs < since) continue;
       const n = Math.min(st.size, 256 * 1024), buf = Buffer.alloc(n), fd = fs.openSync(fp, 'r');
       fs.readSync(fd, buf, 0, n, st.size - n); fs.closeSync(fd);
@@ -208,10 +235,10 @@ async function main() {
     for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
       if (!dir.isDirectory()) continue;
       const pdir = path.join(root, dir.name);
-      const files = fs.readdirSync(pdir).filter((f) => f.endsWith('.jsonl'));
-      for (const f of files) await processFile(pricing, dir.name, path.join(pdir, f));
+      for (const [fp, sid] of listFiles(pdir)) await readFile(dir.name, fp, sid);
     }
   }
+  tally(pricing);
   const projOut = [...projects.values()].map((P) => {
     let best = null, bestN = -1;
     for (const [c, n] of P._cwd) if (n > bestN) { best = c; bestN = n; }
