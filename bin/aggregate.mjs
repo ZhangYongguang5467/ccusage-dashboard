@@ -19,10 +19,10 @@ const PRICING_CACHE = path.join(OUT_DIR, 'pricing.json');
 const PRICING_URL = 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json';
 
 // ---------- pricing ----------
-async function loadPricing() {
+async function loadPricing(maxAge = 24 * 3600e3) {
   let cached = null;
   try { cached = JSON.parse(fs.readFileSync(PRICING_CACHE, 'utf8')); } catch {}
-  const fresh = cached && Date.now() - (cached._fetchedAt || 0) < 24 * 3600e3;
+  const fresh = cached && Date.now() - (cached._fetchedAt || 0) < maxAge;
   if (fresh) return cached;
   try {
     const ctl = new AbortController();
@@ -181,9 +181,29 @@ async function processFile(pricing, pid, file) {
   totals.files++;
 }
 
+// Model ids used in recent logs (last 2 days), read cheaply from the file tails
+function preScanModels() {
+  const out = new Set(), since = Date.now() - 2 * 86400e3;
+  for (const root of ROOTS) for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!dir.isDirectory()) continue;
+    const pdir = path.join(root, dir.name);
+    for (const f of fs.readdirSync(pdir)) {
+      if (!f.endsWith('.jsonl')) continue;
+      const fp = path.join(pdir, f), st = fs.statSync(fp);
+      if (st.mtimeMs < since) continue;
+      const n = Math.min(st.size, 256 * 1024), buf = Buffer.alloc(n), fd = fs.openSync(fp, 'r');
+      fs.readSync(fd, buf, 0, n, st.size - n); fs.closeSync(fd);
+      for (const m of buf.toString('utf8').matchAll(/"model":"([^"]+)"/g)) if (m[1] !== '<synthetic>') out.add(m[1]);
+    }
+  }
+  return [...out];
+}
+
 async function main() {
   const t0 = Date.now();
-  const pricing = await loadPricing();
+  // A model missing from an hour-old cache is likely newer than the cache: refetch before pricing it at $0
+  let pricing = await loadPricing();
+  if (preScanModels().some((m) => !findPrice(pricing, m).found)) { pricing = await loadPricing(3600e3); priceMemo.clear(); }
   for (const root of ROOTS) {
     for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
       if (!dir.isDirectory()) continue;
